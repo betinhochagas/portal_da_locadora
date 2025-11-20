@@ -1,0 +1,274 @@
+// Prisma Schema para Portal da Locadora
+// Sistema de Gestão para Locadoras focadas em Motoristas de App
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENTIDADES BASE (FASE 1)
+// ============================================
+
+// Usuários do sistema (atendentes, gerentes, admin, etc.)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hash bcrypt
+  name      String
+  role      Role     @default(ATENDENTE)
+  active    Boolean  @default(true)
+  filialId  String?  // Null = acesso a todas as filiais (admin)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  filial    Filial?  @relation(fields: [filialId], references: [id])
+
+  @@map("users")
+}
+
+// Perfis de acesso (RBAC)
+enum Role {
+  ADMIN              // Admin do sistema
+  DIRETORIA          // Diretoria/BI
+  FINANCEIRO         // Financeiro
+  GESTOR_FROTA       // Gestor de frota
+  GERENTE_LOJA       // Gerente de loja
+  ATENDENTE          // Atendente de balcão
+  EQUIPE_EXTERNA     // Vistoria/retomada/entregas
+}
+
+// Filiais/Lojas
+model Filial {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String   @unique
+  phone     String?
+  email     String?
+  active    Boolean  @default(true)
+  
+  // Endereço
+  address   String
+  city      String
+  state     String   // UF
+  zipCode   String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  veiculos  Veiculo[]
+  contratos Contrato[]
+
+  @@map("filiais")
+}
+
+// ============================================
+// ENTIDADES DE DOMÍNIO (FASE 2)
+// ============================================
+
+// Motoristas (clientes que alugam veículos)
+model Motorista {
+  id            String   @id @default(uuid())
+  name          String
+  email         String?  @unique
+  phone         String
+  cpf           String?  @unique
+  cnpj          String?  @unique
+  rg            String?
+  cnh           String   @unique
+  cnhCategory   String   // A, B, AB, etc.
+  cnhExpiry     DateTime
+  
+  // Endereço
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  
+  // Dados bancários (para débito automático)
+  bankName      String?
+  bankAgency    String?
+  bankAccount   String?
+  
+  // Controle
+  active        Boolean  @default(true)
+  blacklisted   Boolean  @default(false) // Bloqueado por inadimplência/sinistro
+  blacklistReason String?
+  
+  // Documentos digitalizados
+  cnhPhoto      String?  // URL do arquivo
+  rgPhoto       String?
+  compResidencia String? // Comprovante de residência
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contratos     Contrato[]
+
+  @@map("motoristas")
+}
+
+// Veículos (frota disponível)
+model Veiculo {
+  id            String   @id @default(uuid())
+  plate         String   @unique // Placa
+  renavam       String?  @unique
+  chassi        String?  @unique
+  
+  // Identificação
+  brand         String   // Marca (Fiat, VW, etc.)
+  model         String   // Modelo (Argo, Gol, etc.)
+  year          Int      // Ano modelo
+  color         String
+  category      VehicleCategory @default(HATCH)
+  
+  // Especificações
+  fuelType      FuelType @default(FLEX)
+  transmission  Transmission @default(MANUAL)
+  doors         Int      @default(4)
+  
+  // Controle
+  filialId      String
+  status        VehicleStatus @default(DISPONIVEL)
+  km            Int      @default(0) // Quilometragem atual
+  
+  // Valores
+  fipeValue     Decimal? @db.Decimal(10, 2) // Valor FIPE
+  
+  // Manutenção
+  lastMaintenance DateTime?
+  nextMaintenance DateTime?
+  
+  // Documentação
+  crlvPhoto     String?  // CRLV digitalizado
+  
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  filial        Filial   @relation(fields: [filialId], references: [id])
+  contratos     Contrato[]
+
+  @@map("veiculos")
+}
+
+enum VehicleCategory {
+  HATCH          // Hatch popular
+  SEDAN          // Sedan
+  SUV            // SUV/Crossover
+  PICAPE         // Picape
+  VAN            // Van/Utilitário
+}
+
+enum FuelType {
+  FLEX           // Flex (etanol/gasolina)
+  GASOLINA       // Gasolina
+  DIESEL         // Diesel
+  ELETRICO       // Elétrico
+  HIBRIDO        // Híbrido
+}
+
+enum Transmission {
+  MANUAL         // Manual
+  AUTOMATICO     // Automático
+  AUTOMATIZADO   // Automatizado (AMT)
+}
+
+enum VehicleStatus {
+  DISPONIVEL     // Disponível para locação
+  LOCADO         // Locado atualmente
+  MANUTENCAO     // Em manutenção
+  VISTORIA       // Aguardando vistoria
+  INATIVO        // Inativo (vendido, sinistrado, etc.)
+}
+
+// Planos de locação (produtos oferecidos)
+model Plano {
+  id            String   @id @default(uuid())
+  name          String   // Ex: "Plano Uber Mensal", "Plano 99 Semanal"
+  description   String?
+  
+  // Valores
+  dailyPrice    Decimal  @db.Decimal(10, 2) // Diária
+  weeklyPrice   Decimal? @db.Decimal(10, 2) // Semanal
+  monthlyPrice  Decimal  @db.Decimal(10, 2) // Mensal
+  
+  // Incluso no plano
+  kmIncluded    Int?     // KM inclusos (null = ilimitado)
+  kmExtraPrice  Decimal? @db.Decimal(10, 2) // Valor por KM excedente
+  
+  // Benefícios
+  includesInsurance Boolean @default(false) // Inclui seguro
+  includesMaintenance Boolean @default(true) // Inclui manutenção
+  
+  // Categorias aceitas neste plano
+  allowedCategories VehicleCategory[]
+  
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contratos     Contrato[]
+
+  @@map("planos")
+}
+
+// Contratos de locação
+model Contrato {
+  id            String   @id @default(uuid())
+  contractNumber String  @unique // Número do contrato (ex: 2025-001)
+  
+  // Relacionamentos
+  motoristaId   String
+  veiculoId     String
+  planoId       String
+  filialId      String
+  
+  // Período
+  startDate     DateTime
+  endDate       DateTime
+  billingDay    Int      // Dia do vencimento (1-31)
+  
+  // Valores
+  monthlyAmount Decimal  @db.Decimal(10, 2) // Valor mensal acordado
+  deposit       Decimal? @db.Decimal(10, 2) // Caução
+  
+  // Quilometragem
+  kmStart       Int      // KM inicial
+  kmCurrent     Int?     // KM atual (atualizado periodicamente)
+  
+  // Status
+  status        ContractStatus @default(ATIVO)
+  
+  // Observações
+  notes         String?
+  
+  // Datas de controle
+  signedAt      DateTime?
+  canceledAt    DateTime?
+  cancelReason  String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  motorista     Motorista @relation(fields: [motoristaId], references: [id])
+  veiculo       Veiculo   @relation(fields: [veiculoId], references: [id])
+  plano         Plano     @relation(fields: [planoId], references: [id])
+  filial        Filial    @relation(fields: [filialId], references: [id])
+
+  @@map("contratos")
+}
+
+enum ContractStatus {
+  RASCUNHO       // Rascunho (não assinado)
+  ATIVO          // Ativo
+  SUSPENSO       // Suspenso (inadimplência temporária)
+  CANCELADO      // Cancelado
+  CONCLUIDO      // Concluído (fim do período)
+}
