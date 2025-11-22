@@ -7,11 +7,17 @@ async function main() {
   console.log('🌱 Iniciando seed do banco de dados...');
 
   // Limpar dados existentes (exceto a filial que você criou)
-  console.log('🧹 Limpando contratos, veículos, planos e motoristas...');
+  console.log('🧹 Limpando dados existentes (ordem correta para evitar FK)...');
+  await prisma.cobranca.deleteMany();
+  await prisma.manutencao.deleteMany();
+  await prisma.historicoKm.deleteMany();
   await prisma.contrato.deleteMany();
+  await prisma.contratoTemplate.deleteMany();
+  await prisma.documentoDigital.deleteMany();
   await prisma.veiculo.deleteMany();
   await prisma.plano.deleteMany();
   await prisma.motorista.deleteMany();
+  await prisma.auditLog.deleteMany();
   await prisma.user.deleteMany();
 
   // Criar Filiais
@@ -32,8 +38,10 @@ async function main() {
     },
   });
 
-  const filialFloripa = await prisma.filial.create({
-    data: {
+  const filialFloripa = await prisma.filial.upsert({
+    where: { cnpj: '12345678000199' },
+    update: {},
+    create: {
       name: 'Portal da Locadora - Florianópolis',
       cnpj: '12345678000199',
       phone: '(48) 3333-4444',
@@ -355,6 +363,269 @@ async function main() {
     },
   });
 
+  // Criar Template de Contrato Profissional (Documento Legal para Cartório)
+  console.log('📄 Criando template de contrato profissional...');
+  await prisma.contratoTemplate.create({
+    data: {
+      titulo: 'Contrato de Locação Oficial - Portal da Locadora',
+      ativo: true,
+      createdBy: admin.id,
+      conteudo: `CONTRATO DE LOCAÇÃO DE VEÍCULO PARA MOTORISTAS DE APLICATIVO
+
+═══════════════════════════════════════════════════════════════════
+
+CONTRATO Nº {{CONTRATO_NUMERO}}
+Data de Emissão: {{DATA_ATUAL}}
+
+═══════════════════════════════════════════════════════════════════
+
+IDENTIFICAÇÃO DAS PARTES CONTRATANTES
+
+LOCADOR:
+Razão Social: PORTAL DA LOCADORA LTDA
+CNPJ: 12.345.678/0001-90
+Inscrição Estadual: 123.456.789
+Endereço: Av. Brasil, 1000 - Sala 301 - Centro
+Cidade: Blumenau - SC - CEP: 89010-000
+Telefone: (47) 3333-4444
+E-mail: contato@portaldalocadora.com.br
+Representante Legal: Carlos Alberto Silva
+
+LOCATÁRIO:
+Nome Completo: {{MOTORISTA_NOME}}
+CPF: {{MOTORISTA_CPF}}
+CNH: {{MOTORISTA_CNH}} (Categoria B ou superior)
+Endereço Residencial: {{MOTORISTA_ENDERECO}}
+Telefone: Em cadastro
+E-mail: Em cadastro
+
+═══════════════════════════════════════════════════════════════════
+
+OBJETO DO CONTRATO
+
+Pelo presente instrumento particular de contrato de locação de veículo, o LOCADOR cede ao LOCATÁRIO, em regime de locação mensal, o seguinte veículo automotor para fins de trabalho como motorista de aplicativo:
+
+IDENTIFICAÇÃO DO VEÍCULO:
+• Placa: {{VEICULO_PLACA}}
+• Marca/Modelo: {{VEICULO_MODELO}}
+• Ano de Fabricação: Conforme documento
+• Cor: {{VEICULO_COR}}
+• Chassi: Conforme CRLV
+• RENAVAM: Conforme CRLV
+• Quilometragem Inicial: {{VEICULO_KM_INICIAL}} km
+
+O veículo encontra-se em perfeito estado de conservação e funcionamento, conforme Laudo de Vistoria anexo a este instrumento.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA PRIMEIRA - DA VIGÊNCIA E RENOVAÇÃO
+
+1.1. O presente contrato terá vigência determinada com início em {{CONTRATO_DATA_INICIO}} e término em {{CONTRATO_DATA_FIM}}, totalizando 12 (doze) meses.
+
+1.2. Este contrato poderá ser renovado por igual período, mediante concordância expressa de ambas as partes, com antecedência mínima de 30 (trinta) dias do término da vigência.
+
+1.3. Qualquer alteração nas condições contratuais deverá ser formalizada por meio de aditivo contratual assinado por ambas as partes.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA SEGUNDA - DO VALOR E CONDIÇÕES DE PAGAMENTO
+
+2.1. VALOR MENSAL: O LOCATÁRIO pagará ao LOCADOR o valor de {{CONTRATO_VALOR_MENSAL}} (valor por extenso), referente ao PLANO {{PLANO_NOME}}.
+
+2.2. QUILOMETRAGEM INCLUÍDA: O plano inclui {{PLANO_KM_INCLUIDO}} km/mês. Quilometragem excedente será cobrada conforme tabela vigente.
+
+2.3. VENCIMENTO: O pagamento deverá ser efetuado até o dia 01 (um) de cada mês, via transferência bancária, PIX ou boleto bancário.
+
+2.4. JUROS E MULTA: Em caso de atraso no pagamento, serão aplicados:
+   • Multa de 2% (dois por cento) sobre o valor devido
+   • Juros de mora de 1% (um por cento) ao mês, pro rata die
+   • Correção monetária pelo IGPM/FGV
+
+2.5. INADIMPLÊNCIA: O atraso superior a 15 (quinze) dias facultará ao LOCADOR a suspensão do contrato e retomada imediata do veículo.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA TERCEIRA - DA CAUÇÃO E GARANTIAS
+
+3.1. VALOR DA CAUÇÃO: O LOCATÁRIO depositará, na assinatura deste contrato, o valor de {{CONTRATO_CAUCAO}} (valor por extenso) como caução garantidora.
+
+3.2. FINALIDADE: A caução garantirá o cumprimento de todas as obrigações contratuais, incluindo:
+   • Pagamentos de mensalidades
+   • Reparos de danos causados por uso inadequado
+   • Multas de trânsito de responsabilidade do LOCATÁRIO
+   • Despesas extraordinárias não previstas
+
+3.3. DEVOLUÇÃO: A caução será devolvida em até 30 (trinta) dias após o término do contrato, desde que:
+   • O veículo seja devolvido nas mesmas condições de entrega
+   • Não haja débitos pendentes
+   • Não haja multas ou avarias
+
+3.4. A caução não poderá ser utilizada para abatimento de mensalidades.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA QUARTA - DAS OBRIGAÇÕES DO LOCATÁRIO
+
+4.1. São obrigações exclusivas do LOCATÁRIO:
+
+a) UTILIZAÇÃO: Utilizar o veículo exclusivamente para trabalho como motorista de aplicativo (Uber, 99, InDrive, etc.), vedada a utilização para transporte de cargas ou atividades ilícitas;
+
+b) CONSERVAÇÃO: Zelar pela conservação e limpeza do veículo, mantendo-o em condições adequadas de uso;
+
+c) MANUTENÇÃO BÁSICA: Realizar revisões preventivas conforme manual do fabricante, verificar níveis de óleo, água e calibragem de pneus semanalmente;
+
+d) COMUNICAÇÃO DE SINISTROS: Comunicar imediatamente ao LOCADOR qualquer acidente, roubo, furto ou problema mecânico, lavrando boletim de ocorrência quando necessário;
+
+e) ABASTECIMENTO: Arcar com todas as despesas de combustível;
+
+f) MULTAS: Responsabilizar-se por todas as multas de trânsito e infrações cometidas durante o período de locação;
+
+g) DOCUMENTAÇÃO: Portar sempre CNH válida, CRLV e comprovante de seguro;
+
+h) VEDAÇÕES: Não sublocar, emprestar, ceder ou transferir o veículo a terceiros sob qualquer pretexto;
+
+i) DEVOLUÇÃO: Devolver o veículo ao término do contrato nas mesmas condições de entrega, salvo desgaste natural;
+
+j) SEGURO: Contratar seguro complementar contra terceiros, se desejar (facultativo);
+
+k) RASTREADOR: Não remover, desligar ou danificar o sistema de rastreamento instalado no veículo.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA QUINTA - DAS OBRIGAÇÕES DO LOCADOR
+
+5.1. São obrigações do LOCADOR:
+
+a) ENTREGA: Entregar o veículo em perfeitas condições de uso e funcionamento, com documentação regular;
+
+b) MANUTENÇÃO CORRETIVA: Providenciar reparos em defeitos mecânicos decorrentes de desgaste natural ou problemas de fábrica, desde que comunicado em até 24 horas;
+
+c) SEGURO: Manter o seguro obrigatório do veículo (DPVAT) em dia;
+
+d) IPVA E LICENCIAMENTO: Arcar com despesas de IPVA, licenciamento anual e taxa de vistoria;
+
+e) ASSISTÊNCIA: Fornecer assistência telefônica 24 horas para orientações em caso de pane ou acidente;
+
+f) SUBSTITUIÇÃO: Fornecer veículo reserva em caso de manutenção preventiva agendada, mediante disponibilidade de frota.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA SEXTA - DA QUILOMETRAGEM E CONTROLE
+
+6.1. REGISTRO SEMANAL: O LOCATÁRIO deverá registrar a quilometragem do veículo semanalmente no sistema da LOCADORA, enviando foto do hodômetro;
+
+6.2. KM EXCEDENTE: Caso ultrapasse a quilometragem mensal incluída ({{PLANO_KM_INCLUIDO}} km/mês), será cobrado R$ 0,50 (cinquenta centavos) por quilômetro adicional;
+
+6.3. AUDITORIA: O LOCADOR poderá solicitar vistoria do veículo a qualquer momento para conferência de quilometragem e estado de conservação.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA SÉTIMA - DOS SINISTROS E AVARIAS
+
+7.1. RESPONSABILIDADE: O LOCATÁRIO será responsável por danos causados ao veículo por:
+   • Uso inadequado ou negligência
+   • Acidentes com culpa do LOCATÁRIO
+   • Danos causados por terceiros não identificados
+
+7.2. FRANQUIA: Em caso de sinistro coberto por seguro, o LOCATÁRIO arcará com o valor da franquia;
+
+7.3. SEM SEGURO: Havendo danos não cobertos pelo seguro, o LOCATÁRIO pagará o valor integral do reparo, conforme orçamento de oficina credenciada;
+
+7.4. ROUBO/FURTO: Em caso de roubo ou furto, o LOCATÁRIO deverá lavrar BO em até 24 horas e fornecer cópia ao LOCADOR.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA OITAVA - DA RESCISÃO E PENALIDADES
+
+8.1. RESCISÃO PELO LOCATÁRIO: O contrato poderá ser rescindido pelo LOCATÁRIO mediante aviso prévio de 30 (trinta) dias, sem ônus adicional;
+
+8.2. RESCISÃO PELO LOCADOR: O LOCADOR poderá rescindir o contrato imediatamente nas seguintes hipóteses:
+   • Atraso superior a 15 dias no pagamento
+   • Uso indevido do veículo
+   • Danos intencionais
+   • Sublocação não autorizada
+   • Remoção do rastreador
+
+8.3. MULTA RESCISÓRIA: Na rescisão por inadimplência do LOCATÁRIO, será aplicada multa de 20% sobre o valor restante do contrato;
+
+8.4. DEVOLUÇÃO ANTECIPADA: Caso o veículo seja devolvido antes do término sem justa causa, não haverá devolução proporcional das mensalidades pagas.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA NONA - DAS DISPOSIÇÕES GERAIS
+
+9.1. RASTREAMENTO: O veículo possui sistema de rastreamento GPS instalado para segurança de ambas as partes;
+
+9.2. MANUTENÇÃO PREVENTIVA: O LOCADOR agendará manutenções preventivas com 7 dias de antecedência;
+
+9.3. DOCUMENTAÇÃO: O LOCATÁRIO receberá cópia autenticada deste contrato, CRLV, apólice de seguro e termo de vistoria;
+
+9.4. ALTERAÇÕES: Qualquer alteração neste contrato somente terá validade se formalizada por escrito e assinada por ambas as partes;
+
+9.5. IRREVOGABILIDADE: Este contrato é irrevogável e irretratável durante sua vigência, obrigando as partes e seus sucessores.
+
+═══════════════════════════════════════════════════════════════════
+
+CLÁUSULA DÉCIMA - DO FORO E LEGISLAÇÃO APLICÁVEL
+
+10.1. FORO: Fica eleito o foro da Comarca de Blumenau, Estado de Santa Catarina, para dirimir quaisquer questões ou controvérsias oriundas deste contrato, renunciando as partes a qualquer outro, por mais privilegiado que seja;
+
+10.2. LEGISLAÇÃO: Este contrato rege-se pelas disposições do Código Civil Brasileiro (Lei 10.406/2002) e pelo Código de Defesa do Consumidor (Lei 8.078/1990), no que couber.
+
+═══════════════════════════════════════════════════════════════════
+
+DECLARAÇÃO DE CIÊNCIA E CONCORDÂNCIA
+
+Declaro, para os devidos fins, que li na íntegra todas as cláusulas deste contrato, estando plenamente ciente e de acordo com seus termos e condições, não restando dúvidas quanto ao seu conteúdo.
+
+E por estarem assim justos e contratados, firmam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença de 2 (duas) testemunhas, para que produza seus jurídicos e legais efeitos.
+
+═══════════════════════════════════════════════════════════════════
+
+Blumenau/SC, {{DATA_ATUAL}}
+
+
+_________________________________          _________________________________
+PORTAL DA LOCADORA LTDA                    {{MOTORISTA_NOME}}
+CNPJ: 12.345.678/0001-90                   CPF: {{MOTORISTA_CPF}}
+Representante Legal                        LOCATÁRIO
+
+
+TESTEMUNHAS:
+
+1) _________________________________        2) _________________________________
+   Nome:                                      Nome:
+   CPF:                                       CPF:
+
+
+═══════════════════════════════════════════════════════════════════
+
+ANEXOS OBRIGATÓRIOS:
+□ Laudo de Vistoria do Veículo (com fotos)
+□ Cópia do CRLV
+□ Cópia da CNH do LOCATÁRIO
+□ Comprovante de Residência do LOCATÁRIO
+□ Apólice de Seguro do Veículo
+□ Termo de Responsabilidade sobre Multas
+
+═══════════════════════════════════════════════════════════════════
+
+OBSERVAÇÕES IMPORTANTES:
+
+★ Este contrato é válido para reconhecimento de firma em cartório
+★ O veículo não pode ser utilizado para transporte de cargas ou passageiros fora de aplicativos
+★ Assistência 24h: (47) 99999-9999
+★ Central de Atendimento: contato@portaldalocadora.com.br
+★ Site: www.portaldalocadora.com.br
+
+═══════════════════════════════════════════════════════════════════
+
+VERSÃO DO CONTRATO: 2.0
+ÚLTIMA ATUALIZAÇÃO: Novembro/2025
+DOCUMENTO GERADO PELO SISTEMA: Portal da Locadora - Gestão Inteligente`,
+    },
+  });
+
   console.log('✅ Seed concluído com sucesso!');
   console.log('\n📊 Dados criados:');
   console.log(`  - ${2} Filiais`);
@@ -363,6 +634,7 @@ async function main() {
   console.log(`  - ${3} Planos`);
   console.log(`  - ${5} Veículos`);
   console.log(`  - ${3} Contratos`);
+  console.log(`  - ${1} Template de Contrato`);
   console.log('\n🔑 Credenciais de acesso:');
   console.log('  Email: admin@portaldalocadora.com');
   console.log('  Email: gerente.blumenau@portaldalocadora.com');

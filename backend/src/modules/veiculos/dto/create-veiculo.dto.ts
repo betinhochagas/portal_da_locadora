@@ -47,7 +47,8 @@ export class CreateVeiculoDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^[A-Z]{3}-?[0-9][A-Z0-9][0-9]{2}$/, {
-    message: 'Placa deve estar no formato válido (ABC1234, ABC-1234 ou ABC1D23)',
+    message:
+      'Placa deve estar no formato válido (ABC1234, ABC-1234 ou ABC1D23)',
   })
   plate: string;
 
@@ -104,9 +105,10 @@ export class CreateVeiculoDto {
   @Min(0)
   fipeValue?: number;
 
-  @IsString()
+  @IsNumber()
+  @Min(0)
   @IsOptional()
-  nextMaintenanceKm?: string;
+  nextMaintenanceKm?: number;
 
   @IsString()
   @IsOptional()

@@ -41,12 +41,23 @@ export class MotoristasService {
                 plate: true,
                 brand: true,
                 model: true,
+                km: true,
               },
             },
             plano: {
               select: {
                 id: true,
                 name: true,
+              },
+            },
+            cobrancas: {
+              select: {
+                id: true,
+                dueDate: true,
+                status: true,
+              },
+              orderBy: {
+                dueDate: 'asc',
               },
             },
           },

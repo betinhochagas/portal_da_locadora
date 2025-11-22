@@ -2,6 +2,14 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { documentosService } from '../../services/documentosService';
+import { formatFileSize, isImage, isPDF } from '../../types/documento';
+import type { DocumentoDigital } from '../../types/documento';
+import { Download, FileText, Image as ImageIcon, Eye, ExternalLink, Car as CarIcon } from 'lucide-react';
+import { useState } from 'react';
+import { DocumentModal } from '../../components/DocumentModal';
+import { PDFThumbnail } from '../../components/PDFThumbnail';
+import { ContratoModal } from '../../components/ContratoModal';
 
 interface Motorista {
   id: string;
@@ -30,12 +38,19 @@ interface Motorista {
     status: string;
     startDate: string;
     endDate: string;
+    kmInicial: number;
     veiculo: {
       id: string;
       plate: string;
       brand: string;
       model: string;
+      km: number;
     };
+    cobrancas: Array<{
+      id: string;
+      dueDate: string;
+      status: string;
+    }>;
   }>;
 }
 
@@ -44,6 +59,9 @@ export function MotoristaDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentoDigital | null>(null);
+  const [selectedContratoId, setSelectedContratoId] = useState<string | null>(null);
 
   const { data: motorista, isLoading, error } = useQuery<Motorista>({
     queryKey: ['motorista', id],
@@ -53,13 +71,44 @@ export function MotoristaDetailPage() {
     },
   });
 
+  const { data: documentos = [] } = useQuery<DocumentoDigital[]>({
+    queryKey: ['documentos', 'motorista', id],
+    queryFn: () => documentosService.getAll({ motoristaId: id }),
+    enabled: !!id,
+  });
+
+  // Buscar KM da semana para o veículo do contrato ativo (se houver)
+  const contratoAtivo = motorista?.contratos?.find(c => c.status === 'ATIVO');
+  const veiculoId = contratoAtivo?.veiculo?.id;
+
+  const { data: kmSemana } = useQuery({
+    queryKey: ['km-semana', veiculoId],
+    queryFn: async () => {
+      if (!veiculoId) return null;
+      try {
+        const response = await api.get(`/veiculos/${veiculoId}/km-semana-atual`);
+        return response.data;
+      } catch {
+        return { kmRodadoSemana: null };
+      }
+    },
+    enabled: !!veiculoId,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       await api.delete(`/motoristas/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['motoristas'] });
-      navigate('/motoristas');
+      setMessage({ type: 'success', text: 'Motorista excluído com sucesso!' });
+      // Aguardar 1.5s para mostrar mensagem antes de navegar
+      setTimeout(() => navigate('/motoristas'), 1500);
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      const errorMessage = err.response?.data?.message || 'Erro ao excluir motorista. Pode haver contratos ativos associados.';
+      setMessage({ type: 'error', text: errorMessage });
     },
   });
 
@@ -112,9 +161,68 @@ export function MotoristaDetailPage() {
     return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
   };
 
+  const getPaymentStatus = (cobrancas: Array<{ dueDate: string; status: string }>) => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Verificar cobranças pendentes ou atrasadas
+    const pendingOrOverdue = cobrancas.filter(c => 
+      c.status === 'PENDENTE' || c.status === 'ATRASADA'
+    );
+
+    if (pendingOrOverdue.length === 0) {
+      return { status: 'OK', label: '✅ Em dia', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
+    }
+
+    // Verificar se tem atrasada
+    const overdue = pendingOrOverdue.filter(c => c.status === 'ATRASADA');
+    if (overdue.length > 0) {
+      const oldestOverdue = overdue.sort((a, b) => 
+        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      )[0];
+      const dueDate = new Date(oldestOverdue.dueDate);
+      const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      return { 
+        status: 'OVERDUE', 
+        label: `❌ Atrasado ${daysOverdue} dia${daysOverdue > 1 ? 's' : ''}`, 
+        color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
+      };
+    }
+
+    // Verificar se tem pendente próxima (< 3 dias)
+    const pending = pendingOrOverdue.filter(c => c.status === 'PENDENTE');
+    const nextDue = pending.sort((a, b) => 
+      new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    )[0];
+    
+    const dueDate = new Date(nextDue.dueDate);
+    const daysUntilDue = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilDue <= 2) {
+      return { 
+        status: 'WARNING', 
+        label: `⚠️ Vence em ${daysUntilDue} dia${daysUntilDue !== 1 ? 's' : ''}`, 
+        color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' 
+      };
+    }
+
+    return { status: 'OK', label: '✅ Em dia', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Mensagem de Feedback */}
+        {message && (
+          <div className={`mb-4 p-4 rounded-lg ${
+            message.type === 'success' 
+              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200'
+              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
+          }`}>
+            <p className="font-semibold">{message.text}</p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -159,26 +267,53 @@ export function MotoristaDetailPage() {
         {/* Dados Pessoais */}
         <div className="card mb-6">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">👤 Dados Pessoais</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CPF</div>
-              <div className="font-semibold dark:text-gray-200">{formatCPF(motorista.cpf)}</div>
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Foto de Perfil */}
+            <div className="flex-shrink-0">
+              <div className="w-48 h-48 rounded-lg overflow-hidden border-4 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                {(() => {
+                  const fotoPerfil = documentos.find(d => d.tipo === 'FOTO_PERFIL');
+                  if (fotoPerfil) {
+                    return (
+                      <img
+                        src={documentosService.getDownloadUrl(fotoPerfil.id)}
+                        alt="Foto de perfil"
+                        className="w-full h-full object-cover"
+                      />
+                    );
+                  }
+                  return (
+                    <div className="text-center text-gray-400 dark:text-gray-500">
+                      <div className="text-6xl mb-2">👤</div>
+                      <div className="text-xs">Sem foto</div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CNPJ</div>
-              <div className="font-semibold dark:text-gray-200">{formatCNPJ(motorista.cnpj)}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RG</div>
-              <div className="font-semibold dark:text-gray-200">{motorista.rg || 'N/A'}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Telefone</div>
-              <div className="font-semibold dark:text-gray-200">{motorista.phone}</div>
-            </div>
-            <div className="md:col-span-2">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Email</div>
-              <div className="font-semibold dark:text-gray-200">{motorista.email || 'N/A'}</div>
+            
+            {/* Dados */}
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CPF</div>
+                <div className="font-semibold dark:text-gray-200">{formatCPF(motorista.cpf)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CNPJ</div>
+                <div className="font-semibold dark:text-gray-200">{formatCNPJ(motorista.cnpj)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RG</div>
+                <div className="font-semibold dark:text-gray-200">{motorista.rg || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Telefone</div>
+                <div className="font-semibold dark:text-gray-200">{motorista.phone}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Email</div>
+                <div className="font-semibold dark:text-gray-200">{motorista.email || 'N/A'}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -258,27 +393,222 @@ export function MotoristaDetailPage() {
           </div>
         )}
 
+        {/* Documentos - Preview Only */}
+        {documentos.length > 0 && (
+          <div className="card mb-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📄 Documentos</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {documentos.map(doc => (
+                <div key={doc.id} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700 hover:shadow-md transition-shadow">
+                  {/* Preview */}
+                  <div 
+                    className="mb-3 cursor-pointer group relative"
+                    onClick={() => setSelectedDocument(doc)}
+                  >
+                    {isImage(doc.mimeType) ? (
+                      <>
+                        <img
+                          src={documentosService.getViewUrl(doc.id)}
+                          alt={doc.nomeOriginal}
+                          className="w-full h-32 object-cover rounded"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded flex items-center justify-center">
+                          <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </>
+                    ) : isPDF(doc.mimeType) ? (
+                      <div className="relative">
+                        <PDFThumbnail
+                          url={documentosService.getViewUrl(doc.id)}
+                          alt={doc.nomeOriginal}
+                          className="w-full h-32 rounded"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded flex items-center justify-center">
+                          <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-32 bg-gray-200 dark:bg-gray-600 rounded group-hover:bg-gray-300 dark:group-hover:bg-gray-500 transition-colors">
+                        <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                        <Eye className="w-6 h-6 text-gray-600 dark:text-gray-400 absolute opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Info */}
+                  <div className="space-y-1 mb-3">
+                    <div className="flex items-center gap-2">
+                      {isImage(doc.mimeType) ? (
+                        <ImageIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      )}
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {doc.tipo}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                      {doc.nomeOriginal}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {formatFileSize(doc.tamanho)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {new Date(doc.uploadedAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => setSelectedDocument(doc)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Visualizar
+                    </button>
+                    <a
+                      href={documentosService.getDownloadUrl(doc.id)}
+                      download
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Visualização */}
+        {selectedDocument && (
+          <DocumentModal
+            isOpen={!!selectedDocument}
+            onClose={() => setSelectedDocument(null)}
+            documento={selectedDocument}
+          />
+        )}
+
+        {/* Veículo do Contrato Ativo */}
+        {motorista.contratos && motorista.contratos.some(c => c.status === 'ATIVO') && (
+          <div className="card mb-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">🚗 Veículo em Uso</h2>
+            {motorista.contratos
+              .filter(c => c.status === 'ATIVO')
+              .map((contrato) => {
+                const kmInicial = contrato.kmInicial || 0;
+                const kmAtual = contrato.veiculo?.km || 0;
+                const kmRodados = kmAtual - kmInicial;
+
+                return (
+                  <div key={contrato.id} className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CarIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          <div className="text-sm text-green-700 dark:text-green-300">Veículo</div>
+                        </div>
+                        <div className="font-bold text-green-900 dark:text-green-100 text-lg">
+                          {contrato.veiculo.plate}
+                        </div>
+                        <div className="text-sm text-green-700 dark:text-green-300">
+                          {contrato.veiculo.brand} {contrato.veiculo.model}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-green-700 dark:text-green-300 mb-1">KM Inicial</div>
+                        <div className="font-semibold text-green-900 dark:text-green-100">
+                          {kmInicial.toLocaleString('pt-BR')} km
+                        </div>
+                        <div className="text-sm text-green-700 dark:text-green-300 mt-2 mb-1">KM Atual</div>
+                        <div className="font-semibold text-green-900 dark:text-green-100">
+                          {kmAtual.toLocaleString('pt-BR')} km
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-green-700 dark:text-green-300 mb-1">KM Rodados</div>
+                        <div className="font-bold text-green-900 dark:text-green-100 text-2xl">
+                          {kmRodados.toLocaleString('pt-BR')} km
+                        </div>
+                        <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          {kmRodados >= 0 ? 'Total percorrido' : 'Verificar KM'}
+                        </div>
+                        
+                        {/* KM Rodado Esta Semana */}
+                        {kmSemana?.kmRodadoSemana !== null && kmSemana?.kmRodadoSemana !== undefined && (
+                          <>
+                            <div className="text-sm text-green-700 dark:text-green-300 mt-3 mb-1 font-semibold">
+                              📊 KM Esta Semana
+                            </div>
+                            <div className="font-bold text-green-900 dark:text-green-100 text-xl">
+                              {kmSemana.kmRodadoSemana.toLocaleString('pt-BR')} km
+                            </div>
+                            {kmSemana.ultimoRegistro && (
+                              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                Último registro: {new Date(kmSemana.ultimoRegistro.dataRegistro).toLocaleDateString('pt-BR')}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        
+                        {kmSemana?.kmRodadoSemana === 0 && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                            Nenhum registro de KM esta semana
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+        )}
+
         {/* Contratos */}
         <div className="card">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📋 Contratos</h2>
           {motorista.contratos && motorista.contratos.length > 0 ? (
             <div className="space-y-3">
-              {motorista.contratos.map((contrato) => (
-                <div key={contrato.id} className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-purple-900 dark:text-purple-200">
-                      Contrato #{contrato.contractNumber}
+              {motorista.contratos.map((contrato) => {
+                const paymentStatus = getPaymentStatus(contrato.cobrancas && contrato.cobrancas.length > 0 ? contrato.cobrancas : []);
+                return (
+                  <div key={contrato.id} className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-semibold text-purple-900 dark:text-purple-200">
+                        Contrato #{contrato.contractNumber}
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="px-2 py-1 bg-purple-600 dark:bg-purple-700 text-white text-xs rounded-full">
+                          {contrato.status}
+                        </span>
+                      </div>
                     </div>
-                    <span className="px-2 py-1 bg-purple-600 dark:bg-purple-700 text-white text-xs rounded-full">
-                      {contrato.status}
-                    </span>
+                    
+                    {/* Status de Pagamento */}
+                    <div className="mb-3">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${paymentStatus.color}`}>
+                        {paymentStatus.label}
+                      </span>
+                    </div>
+
+                    <div className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                      <div><strong>Período:</strong> {new Date(contrato.startDate).toLocaleDateString('pt-BR')} até {new Date(contrato.endDate).toLocaleDateString('pt-BR')}</div>
+                    </div>
+
+                    {/* Botão Ver Contrato */}
+                    <button
+                      onClick={() => setSelectedContratoId(contrato.id)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Ver Contrato Completo
+                    </button>
                   </div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    <div><strong>Veículo:</strong> {contrato.veiculo.brand} {contrato.veiculo.model} ({contrato.veiculo.plate})</div>
-                    <div><strong>Período:</strong> {new Date(contrato.startDate).toLocaleDateString('pt-BR')} até {new Date(contrato.endDate).toLocaleDateString('pt-BR')}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -289,6 +619,15 @@ export function MotoristaDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Modal de Contrato */}
+        {selectedContratoId && (
+          <ContratoModal
+            isOpen={!!selectedContratoId}
+            onClose={() => setSelectedContratoId(null)}
+            contratoId={selectedContratoId}
+          />
+        )}
       </div>
     </div>
   );

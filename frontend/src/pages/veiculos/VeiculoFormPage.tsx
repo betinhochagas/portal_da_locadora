@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { FileUpload } from '../../components/FileUpload';
+import { documentosService } from '../../services/documentosService';
+import { TipoDocumento, formatFileSize } from '../../types/documento';
+import type { DocumentoDigital } from '../../types/documento';
+import { Download, Trash2, FileText } from 'lucide-react';
 
 interface Filial {
   id: string;
@@ -32,6 +37,20 @@ export function VeiculoFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEditing = !!id;
+
+  // Query for documents (only in edit mode)
+  const { data: documentos = [] } = useQuery<DocumentoDigital[]>({
+    queryKey: ['documentos', 'veiculo', id],
+    queryFn: () => documentosService.getAll({ veiculoId: id }),
+    enabled: isEditing && !!id,
+  });
+
+  const deleteDocMutation = useMutation({
+    mutationFn: (docId: string) => documentosService.delete(docId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentos', 'veiculo', id] });
+    },
+  });
 
   const [formData, setFormData] = useState<VeiculoFormData>({
     plate: '',
@@ -99,16 +118,12 @@ export function VeiculoFormPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: VeiculoFormData) => {
-      console.log('Enviando dados para atualização:', data);
       await api.patch(`/veiculos/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['veiculos'] });
       queryClient.invalidateQueries({ queryKey: ['veiculo', id] });
       navigate(`/veiculos/${id}`);
-    },
-    onError: (error) => {
-      console.error('Erro ao atualizar veículo:', error);
     },
   });
 
@@ -375,6 +390,136 @@ export function VeiculoFormPage() {
               </div>
             </div>
           </div>
+
+          {/* Documentos - Only show in edit mode */}
+          {isEditing && (
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📄 Documentos do Veículo</h2>
+              
+              {/* Upload de CRLV */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">CRLV (Certificado de Registro e Licenciamento)</h3>
+                <FileUpload
+                  tipo={TipoDocumento.CRLV}
+                  veiculoId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'veiculo', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.CRLV).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upload de Laudo de Vistoria */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">Laudo de Vistoria</h3>
+                <FileUpload
+                  tipo={TipoDocumento.LAUDO_VISTORIA}
+                  veiculoId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'veiculo', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.LAUDO_VISTORIA).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upload de Fotos do Veículo */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">Fotos do Veículo</h3>
+                <FileUpload
+                  tipo={TipoDocumento.FOTO_VEICULO}
+                  veiculoId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'veiculo', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.FOTO_VEICULO).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 justify-end border-t pt-6">

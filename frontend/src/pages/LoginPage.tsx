@@ -20,8 +20,7 @@ export function LoginPage() {
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (err) {
-      console.error('Erro no login:', err);
+    } catch {
       setError('Email ou senha inválidos');
     } finally {
       setLoading(false);

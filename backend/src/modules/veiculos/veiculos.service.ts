@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVeiculoDto } from './dto/create-veiculo.dto';
 import { UpdateVeiculoDto } from './dto/update-veiculo.dto';
+import { RegistrarKmDto } from './dto/registrar-km.dto';
 
 @Injectable()
 export class VeiculosService {
@@ -78,6 +79,43 @@ export class VeiculosService {
     }
 
     return veiculo;
+  }
+
+  async findAlertasManutencao() {
+    const limiarKm = 1000; // Alerta quando faltar 1000 km ou menos
+
+    const veiculos = await this.prisma.veiculo.findMany({
+      where: {
+        active: true,
+        nextMaintenanceKm: {
+          not: null,
+        },
+      },
+      include: {
+        filial: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        nextMaintenanceKm: 'asc',
+      },
+    });
+
+    // Filtrar veículos que precisam de manutenção em breve ou já passaram
+    return veiculos
+      .filter((v) => {
+        if (!v.nextMaintenanceKm) return false;
+        const kmRestantes = v.nextMaintenanceKm - v.km;
+        return kmRestantes <= limiarKm;
+      })
+      .map((v) => ({
+        ...v,
+        kmRestantes: v.nextMaintenanceKm! - v.km,
+        atrasado: v.km >= v.nextMaintenanceKm!,
+      }));
   }
 
   async create(createVeiculoDto: CreateVeiculoDto) {
@@ -250,5 +288,159 @@ export class VeiculosService {
     return this.prisma.veiculo.delete({
       where: { id },
     });
+  }
+
+  /**
+   * Registrar KM semanal do veículo
+   * Calcula automaticamente o KM rodado baseado no último registro
+   */
+  async registrarKm(
+    veiculoId: string,
+    registrarKmDto: RegistrarKmDto,
+    userId?: string,
+  ) {
+    const { kmAtual, observacao } = registrarKmDto;
+
+    // Verificar se veículo existe
+    const veiculo = await this.findOne(veiculoId);
+
+    // Buscar último registro de KM
+    const ultimoRegistro = await this.prisma.historicoKm.findFirst({
+      where: { veiculoId },
+      orderBy: { dataRegistro: 'desc' },
+    });
+
+    // KM anterior: último registro OU KM inicial do contrato ativo OU KM atual do veículo
+    let kmAnterior = veiculo.km;
+
+    if (ultimoRegistro) {
+      kmAnterior = ultimoRegistro.kmAtual;
+    } else {
+      // Se não tem histórico, verificar se tem contrato ativo
+      const contratoAtivo = await this.prisma.contrato.findFirst({
+        where: {
+          veiculoId,
+          status: 'ATIVO',
+        },
+        orderBy: {
+          startDate: 'desc',
+        },
+      });
+
+      if (contratoAtivo) {
+        kmAnterior = contratoAtivo.kmStart;
+      }
+    }
+
+    // Validar: KM atual não pode ser menor que anterior
+    if (kmAtual < kmAnterior) {
+      throw new BadRequestException(
+        `KM atual (${kmAtual}) não pode ser menor que o KM anterior (${kmAnterior})`,
+      );
+    }
+
+    const kmRodado = kmAtual - kmAnterior;
+
+    // Buscar contrato ativo (se houver)
+    const contratoAtivo = await this.prisma.contrato.findFirst({
+      where: {
+        veiculoId,
+        status: 'ATIVO',
+      },
+    });
+
+    // Criar registro no histórico
+    const historico = await this.prisma.historicoKm.create({
+      data: {
+        veiculoId,
+        contratoId: contratoAtivo?.id,
+        kmAtual,
+        kmAnterior,
+        kmRodado,
+        registradoPor: userId,
+        observacao,
+      },
+      include: {
+        veiculo: {
+          select: {
+            plate: true,
+            brand: true,
+            model: true,
+          },
+        },
+        contrato: {
+          select: {
+            contractNumber: true,
+            motorista: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Atualizar KM atual do veículo
+    await this.prisma.veiculo.update({
+      where: { id: veiculoId },
+      data: { km: kmAtual },
+    });
+
+    return historico;
+  }
+
+  /**
+   * Buscar histórico de KM de um veículo
+   */
+  async getHistoricoKm(veiculoId: string) {
+    await this.findOne(veiculoId); // Verificar se existe
+
+    return this.prisma.historicoKm.findMany({
+      where: { veiculoId },
+      include: {
+        contrato: {
+          select: {
+            contractNumber: true,
+            motorista: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        dataRegistro: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Obter KM rodado na última semana
+   */
+  async getKmSemanaAtual(veiculoId: string) {
+    await this.findOne(veiculoId); // Verificar se existe
+
+    const ultimoRegistro = await this.prisma.historicoKm.findFirst({
+      where: { veiculoId },
+      orderBy: { dataRegistro: 'desc' },
+    });
+
+    if (!ultimoRegistro) {
+      return {
+        kmRodadoSemana: 0,
+        ultimoRegistro: null,
+      };
+    }
+
+    return {
+      kmRodadoSemana: ultimoRegistro.kmRodado,
+      ultimoRegistro: {
+        kmAtual: ultimoRegistro.kmAtual,
+        kmAnterior: ultimoRegistro.kmAnterior,
+        dataRegistro: ultimoRegistro.dataRegistro,
+      },
+    };
   }
 }

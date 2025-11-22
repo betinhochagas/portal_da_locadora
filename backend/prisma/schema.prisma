@@ -27,7 +27,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  filial    Filial?  @relation(fields: [filialId], references: [id])
+  filial            Filial?             @relation(fields: [filialId], references: [id])
+  auditLogs         AuditLog[]          // Logs de auditoria gerados pelo usuário
+  contratoTemplates ContratoTemplate[]  // Templates de contrato criados
 
   @@map("users")
 }
@@ -110,6 +112,7 @@ model Motorista {
   updatedAt     DateTime @updatedAt
 
   contratos     Contrato[]
+  documentos    DocumentoDigital[]
 
   @@map("motoristas")
 }
@@ -142,8 +145,9 @@ model Veiculo {
   fipeValue     Decimal? @db.Decimal(10, 2) // Valor FIPE
   
   // Manutenção
-  lastMaintenance DateTime?
-  nextMaintenance DateTime?
+  lastMaintenance    DateTime?
+  nextMaintenance    DateTime?
+  nextMaintenanceKm  Int? // Próxima manutenção preventiva em km
   
   // Documentação
   crlvPhoto     String?  // CRLV digitalizado
@@ -154,8 +158,32 @@ model Veiculo {
 
   filial        Filial   @relation(fields: [filialId], references: [id])
   contratos     Contrato[]
+  manutencoes   Manutencao[]
+  documentos    DocumentoDigital[]
+  historicoKm   HistoricoKm[]
 
   @@map("veiculos")
+}
+
+// Histórico de KM semanal do veículo
+model HistoricoKm {
+  id            String   @id @default(uuid())
+  veiculoId     String
+  contratoId    String?  // Contrato ativo quando registrado
+  kmAtual       Int      // KM atual registrado
+  kmAnterior    Int      // KM da semana anterior
+  kmRodado      Int      // Diferença calculada (kmAtual - kmAnterior)
+  dataRegistro  DateTime @default(now()) // Data do registro
+  registradoPor String?  // ID do usuário que registrou
+  observacao    String?  // Observações opcionais
+  
+  veiculo       Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  contrato      Contrato? @relation(fields: [contratoId], references: [id])
+  
+  @@map("historico_km")
+  @@index([veiculoId])
+  @@index([contratoId])
+  @@index([dataRegistro])
 }
 
 enum VehicleCategory {
@@ -261,6 +289,9 @@ model Contrato {
   veiculo       Veiculo   @relation(fields: [veiculoId], references: [id])
   plano         Plano     @relation(fields: [planoId], references: [id])
   filial        Filial    @relation(fields: [filialId], references: [id])
+  cobrancas     Cobranca[]
+  documentos    DocumentoDigital[]
+  historicoKm   HistoricoKm[]
 
   @@map("contratos")
 }
@@ -271,4 +302,181 @@ enum ContractStatus {
   SUSPENSO       // Suspenso (inadimplência temporária)
   CANCELADO      // Cancelado
   CONCLUIDO      // Concluído (fim do período)
+}
+
+// Cobranças mensais dos contratos
+model Cobranca {
+  id            String   @id @default(uuid())
+  contratoId    String
+  
+  // Dados da cobrança
+  referenceMonth String  // Mês de referência (YYYY-MM)
+  dueDate       DateTime // Data de vencimento
+  amount        Decimal  @db.Decimal(10, 2) // Valor da cobrança
+  
+  // Status do pagamento
+  status        PaymentStatus @default(PENDENTE)
+  paymentDate   DateTime?
+  paymentMethod String?  // PIX, TED, Dinheiro, Cartão, etc.
+  
+  // Controle de inadimplência
+  daysLate      Int      @default(0) // Dias de atraso
+  lateFee       Decimal? @db.Decimal(10, 2) // Multa por atraso
+  
+  // Observações
+  observations  String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contrato      Contrato @relation(fields: [contratoId], references: [id])
+
+  @@unique([contratoId, referenceMonth]) // Evita duplicatas
+  @@map("cobrancas")
+}
+
+enum PaymentStatus {
+  PENDENTE       // Aguardando pagamento
+  PAGA           // Paga
+  ATRASADA       // Atrasada (vencimento passou)
+  CANCELADA      // Cancelada
+}
+
+// Manutenções dos veículos
+model Manutencao {
+  id            String   @id @default(uuid())
+  veiculoId     String
+  
+  // Dados da manutenção
+  type          MaintenanceType
+  description   String   // Descrição do serviço
+  date          DateTime // Data da manutenção
+  mileage       Int      // Quilometragem no momento da manutenção
+  
+  // Valores e fornecedor
+  cost          Decimal  @db.Decimal(10, 2) // Custo da manutenção
+  provider      String   // Oficina/fornecedor
+  
+  // Status
+  status        MaintenanceStatus @default(AGENDADA)
+  
+  // Observações
+  observations  String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  veiculo       Veiculo  @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  @@map("manutencoes")
+}
+
+enum MaintenanceType {
+  PREVENTIVA     // Manutenção preventiva
+  CORRETIVA      // Manutenção corretiva
+  REVISAO        // Revisão periódica
+}
+
+enum MaintenanceStatus {
+  AGENDADA       // Agendada
+  EM_ANDAMENTO   // Em andamento
+  CONCLUIDA      // Concluída
+  CANCELADA      // Cancelada
+}
+
+// ============================================
+// AUDIT LOG (RASTREAMENTO DE ALTERAÇÕES)
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  entity    String   // Nome da entidade (Contrato, Veiculo, Motorista, etc)
+  entityId  String   // ID do registro alterado
+  action    AuditAction // CREATE, UPDATE, DELETE
+  userId    String?  // Usuário que fez a alteração (null = sistema)
+  userName  String?  // Nome do usuário no momento da ação
+  changes   Json?    // Diff das alterações (before/after)
+  timestamp DateTime @default(now())
+  
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// ============================================
+// DOCUMENTOS DIGITALIZADOS (FASE 5)
+// ============================================
+
+// Documentos digitalizados (CNH, CRLV, contratos, laudos, etc)
+model DocumentoDigital {
+  id            String   @id @default(uuid())
+  tipo          TipoDocumento
+  nomeArquivo   String
+  nomeOriginal  String
+  tamanho       Int      // Tamanho em bytes
+  mimeType      String
+  url           String   // Caminho do arquivo ou URL (S3, local, etc)
+  
+  // Relacionamentos polimórficos (apenas um deve estar preenchido)
+  motoristaId   String?
+  veiculoId     String?
+  contratoId    String?
+  
+  // Auditoria
+  uploadedBy    String?  // ID do usuário que fez upload
+  uploadedAt    DateTime @default(now())
+  
+  // Relacionamentos
+  motorista     Motorista? @relation(fields: [motoristaId], references: [id], onDelete: Cascade)
+  veiculo       Veiculo?   @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  contrato      Contrato?  @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  
+  @@index([motoristaId])
+  @@index([veiculoId])
+  @@index([contratoId])
+  @@index([tipo])
+  @@map("documentos_digitais")
+}
+
+enum TipoDocumento {
+  CNH                  // Carteira Nacional de Habilitação
+  RG                   // Registro Geral
+  CPF                  // Cadastro de Pessoa Física
+  FOTO_PERFIL          // Foto de Perfil do Motorista
+  COMPROVANTE_RESIDENCIA
+  COMPROVANTE_RENDA
+  CRLV                 // Certificado de Registro e Licenciamento de Veículo
+  LAUDO_VISTORIA
+  CONTRATO_ASSINADO
+  FOTO_VEICULO
+  OUTROS
+}
+
+// Templates de Contrato
+model ContratoTemplate {
+  id        String   @id @default(uuid())
+  titulo    String
+  conteudo  String   @db.Text
+  ativo     Boolean  @default(false)
+  createdBy String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [createdBy], references: [id])
+
+  @@map("contrato_templates")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
 }

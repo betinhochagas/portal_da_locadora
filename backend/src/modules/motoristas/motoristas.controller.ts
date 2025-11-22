@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { MotoristasService } from './motoristas.service';
 import { CreateMotoristaDto } from './dto/create-motorista.dto';
@@ -15,9 +16,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 
 @Controller('motoristas')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@UseInterceptors(AuditInterceptor)
 export class MotoristasController {
   constructor(private readonly motoristasService: MotoristasService) {}
 

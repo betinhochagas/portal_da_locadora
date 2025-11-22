@@ -1,7 +1,12 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { FileUpload } from '../../components/FileUpload';
+import { documentosService } from '../../services/documentosService';
+import { TipoDocumento, formatFileSize } from '../../types/documento';
+import type { DocumentoDigital } from '../../types/documento';
+import { Download, Trash2, FileText } from 'lucide-react';
 
 interface MotoristaFormData {
   name: string;
@@ -29,7 +34,23 @@ export function MotoristaFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const isEditing = !!id;
+  const justCreated = searchParams.get('uploaded') === 'true';
+
+  // Query for documents (only in edit mode)
+  const { data: documentos = [] } = useQuery<DocumentoDigital[]>({
+    queryKey: ['documentos', 'motorista', id],
+    queryFn: () => documentosService.getAll({ motoristaId: id }),
+    enabled: isEditing && !!id,
+  });
+
+  const deleteDocMutation = useMutation({
+    mutationFn: (docId: string) => documentosService.delete(docId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentos', 'motorista', id] });
+    },
+  });
 
   const [formData, setFormData] = useState<MotoristaFormData>({
     name: '',
@@ -98,11 +119,13 @@ export function MotoristaFormPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<MotoristaFormData>) => {
-      await api.post('/motoristas', data);
+      const response = await api.post('/motoristas', data);
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['motoristas'] });
-      navigate('/motoristas');
+      // Redirecionar para a página de edição para adicionar documentos
+      navigate(`/motoristas/${data.id}/editar?uploaded=true`);
     },
   });
 
@@ -112,11 +135,8 @@ export function MotoristaFormPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['motoristas'] });
-      queryClient.invalidateQueries({ queryKey: ['motorista', id] });
-      navigate(`/motoristas/${id}`);
-    },
-    onError: (error) => {
-      console.error('Erro ao atualizar motorista:', error);
+      queryClient.invalidateQueries({ queryKey: ['motoristas'] });
+      navigate('/motoristas');
     },
   });
 
@@ -254,6 +274,27 @@ export function MotoristaFormPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="card">
+          {/* Mensagem de Sucesso ao Criar */}
+          {justCreated && (
+            <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 dark:bg-green-900/20 dark:border-green-700">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-500 dark:text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
+                    ✅ Motorista cadastrado com sucesso!
+                  </h3>
+                  <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+                    Agora você pode fazer upload dos documentos (CNH, Foto de Perfil e Comprovante de Residência) abaixo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Dados Pessoais */}
           <div className="mb-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">👤 Dados Pessoais</h2>
@@ -496,6 +537,225 @@ export function MotoristaFormPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Documentos - Show sections in both create and edit modes */}
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📄 Documentos</h2>
+            
+            {!isEditing && (
+              <div className="space-y-6">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    ℹ️ Após criar o motorista, você será redirecionado para fazer upload dos documentos (CNH, Foto de Perfil e Comprovante de Residência).
+                  </p>
+                </div>
+
+                {/* Preview sections for create mode */}
+                <div className="space-y-4 opacity-60 pointer-events-none">
+                  <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">📸 Foto de Perfil</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Upload disponível após criação do cadastro
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">🪪 CNH</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Upload disponível após criação do cadastro
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">🏠 Comprovante de Residência</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Upload disponível após criação do cadastro
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {isEditing && (
+              <>
+              {/* Upload de Foto de Perfil */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">📸 Foto de Perfil</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Faça upload de uma foto do motorista (formato JPG, PNG ou WEBP, máx. 10MB)
+                </p>
+                <FileUpload
+                  tipo={TipoDocumento.FOTO_PERFIL}
+                  motoristaId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'motorista', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.FOTO_PERFIL).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upload de CNH */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">🪪 CNH (Carteira Nacional de Habilitação)</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Faça upload da CNH (frente e verso em um único arquivo PDF ou imagem)
+                </p>
+                <FileUpload
+                  tipo={TipoDocumento.CNH}
+                  motoristaId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'motorista', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.CNH).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upload de RG */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">🆔 RG (Registro Geral)</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Faça upload do RG (frente e verso em um único arquivo PDF ou imagem)
+                </p>
+                <FileUpload
+                  tipo={TipoDocumento.RG}
+                  motoristaId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'motorista', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.RG).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upload de Comprovante de Residência */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">🏠 Comprovante de Residência</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Faça upload do comprovante de residência (conta de luz, água, telefone, etc.)
+                </p>
+                <FileUpload
+                  tipo={TipoDocumento.COMPROVANTE_RESIDENCIA}
+                  motoristaId={id}
+                  onUploadSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['documentos', 'motorista', id] });
+                  }}
+                />
+                {documentos.filter(d => d.tipo === TipoDocumento.COMPROVANTE_RESIDENCIA).map(doc => (
+                  <div key={doc.id} className="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{doc.nomeOriginal}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({formatFileSize(doc.tamanho)})</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={documentosService.getDownloadUrl(doc.id)}
+                        download
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente excluir este documento?')) {
+                            deleteDocMutation.mutate(doc.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </>
+            )}
           </div>
 
           {/* Buttons */}

@@ -44,8 +44,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const response = await api.get('/auth/profile');
           setUser(response.data);
-        } catch (error) {
-          console.error('Erro ao carregar usuário:', error);
+        } catch {
           localStorage.removeItem('token');
         }
       }

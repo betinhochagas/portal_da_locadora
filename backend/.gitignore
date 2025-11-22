@@ -42,3 +42,7 @@ tmp/
 temp/
 
 /generated/prisma
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
