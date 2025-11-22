@@ -30,7 +30,24 @@ portal_da_locadora/
 
 ## Como Começar
 
-### Setup Rápido
+### 🚀 Setup Rápido (Windows)
+
+**Primeira vez:**
+```bash
+# Execute o script de setup (instala dependências e configura banco)
+setup-primeiro-uso.bat
+```
+
+**Uso diário:**
+```bash
+# Inicia backend + frontend + docker em janelas separadas
+start-dev.bat
+
+# Para parar tudo
+stop-dev.bat
+```
+
+### 📦 Setup Manual
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/betinhochagas/portal_da_locadora.git
