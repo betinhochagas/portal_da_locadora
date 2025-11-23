@@ -368,7 +368,13 @@ export class ContratosService {
   async cancelContract(id: string, reason: string) {
     const contrato = await this.findOne(id);
 
-    if (![ContractStatus.ATIVO, ContractStatus.SUSPENSO, ContractStatus.ANALISE].includes(contrato.status)) {
+    const statusPermitidos: ContractStatus[] = [
+      ContractStatus.ATIVO, 
+      ContractStatus.SUSPENSO, 
+      ContractStatus.ANALISE
+    ];
+    
+    if (!statusPermitidos.includes(contrato.status)) {
       throw new BadRequestException(
         'Apenas contratos ativos, suspensos ou em análise podem ser cancelados',
       );
