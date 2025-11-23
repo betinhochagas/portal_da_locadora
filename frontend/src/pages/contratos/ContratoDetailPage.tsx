@@ -21,6 +21,9 @@ export default function ContratoDetailPage() {
   >(null);
   const [reason, setReason] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
 
   const {
     data: contrato,
@@ -122,6 +125,32 @@ export default function ContratoDetailPage() {
     }
   };
 
+  const handleOpenEmailModal = () => {
+    setEmailRecipient(contrato?.motorista?.email || '');
+    setShowEmailModal(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!contrato?.id) return;
+    
+    setIsSendingEmail(true);
+    try {
+      await api.post(`/contratos/${contrato.id}/enviar-email`, {
+        email: emailRecipient,
+      });
+      setMessage({ type: 'success', text: `Email enviado com sucesso para ${emailRecipient}!` });
+      setShowEmailModal(false);
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      const errorMessage = err.response?.data?.message || 'Erro ao enviar email';
+      setMessage({ type: 'error', text: errorMessage });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const formatCpfCnpj = (cpf: string | null, cnpj: string | null) => {
     if (cpf) return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     if (cnpj) return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
@@ -172,7 +201,14 @@ export default function ContratoDetailPage() {
               disabled={isDownloading}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isDownloading ? '⏳ Gerando PDF...' : '📄 Baixar Contrato PDF'}
+              {isDownloading ? '⏳ Gerando PDF...' : '📄 Baixar PDF'}
+            </button>
+            <button
+              onClick={handleOpenEmailModal}
+              disabled={isSendingEmail}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSendingEmail ? '⏳ Enviando...' : '📧 Enviar por Email'}
             </button>
             <Link to="/contratos" className="btn-secondary">
               Voltar
@@ -436,6 +472,50 @@ export default function ContratoDetailPage() {
                   }
                 >
                   {actionMutation.isPending ? 'Processando...' : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Envio de Email */}
+        {showEmailModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                📧 Enviar Contrato por Email
+              </h3>
+              <div className="mb-4">
+                <label className="label">Email do Destinatário</label>
+                <input
+                  type="email"
+                  value={emailRecipient}
+                  onChange={(e) => setEmailRecipient(e.target.value)}
+                  className="input"
+                  placeholder="email@exemplo.com"
+                  required
+                />
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  O PDF do contrato será anexado ao email
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setEmailRecipient('');
+                  }}
+                  className="btn-secondary"
+                  disabled={isSendingEmail}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendEmail}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSendingEmail || !emailRecipient}
+                >
+                  {isSendingEmail ? '⏳ Enviando...' : '📧 Enviar'}
                 </button>
               </div>
             </div>

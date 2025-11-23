@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ExceptionFilter } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
@@ -12,35 +12,25 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  // Log de todas as requisições (DEBUG)
-  app.use((req: any, res: any, next: any) => {
-    if (req.url.includes('gerar-pdf')) {
-      console.log('\n📥 [MIDDLEWARE] Requisição recebida:');
-      console.log('   URL:', req.method, req.url);
-      console.log('   Headers:', req.headers.authorization ? 'Token presente' : 'SEM TOKEN');
-      console.log('   Body:', JSON.stringify(req.body));
-      console.log('   Content-Type:', req.headers['content-type'] || 'não especificado');
-      console.log('');
-    }
-    next();
-  });
-
-  // Exception filter global para debug
+  // Exception filter global
   app.useGlobalFilters({
-    catch(exception: any, host: any) {
+    catch(
+      exception: { status?: number; message?: string; stack?: string },
+      host: {
+        switchToHttp: () => {
+          getResponse: () => {
+            status: (code: number) => {
+              json: (data: Record<string, unknown>) => void;
+            };
+          };
+          getRequest: () => { url: string };
+        };
+      },
+    ) {
       const ctx = host.switchToHttp();
       const response = ctx.getResponse();
       const request = ctx.getRequest();
-      
-      if (request.url.includes('gerar-pdf')) {
-        console.error('\n❌❌❌ [EXCEPTION FILTER] Erro capturado:');
-        console.error('   URL:', request.method, request.url);
-        console.error('   Status:', exception.status || 500);
-        console.error('   Mensagem:', exception.message || 'Erro desconhecido');
-        console.error('   Stack:', exception.stack);
-        console.error('');
-      }
-      
+
       const status = exception.status || 500;
       response.status(status).json({
         statusCode: status,
@@ -49,7 +39,7 @@ async function bootstrap() {
         message: exception.message || 'Internal server error',
       });
     },
-  } as any);
+  } as ExceptionFilter);
 
   // Global Validation Pipe
   app.useGlobalPipes(

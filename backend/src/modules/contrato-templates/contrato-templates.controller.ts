@@ -41,7 +41,10 @@ export class ContratoTemplatesController {
 
   @Post()
   @Roles(Role.ADMIN, Role.DIRETORIA)
-  create(@Body() dto: CreateTemplateDto, @CurrentUser() user: { userId: string }) {
+  create(
+    @Body() dto: CreateTemplateDto,
+    @CurrentUser() user: { userId: string },
+  ) {
     return this.service.create(dto, user.userId);
   }
 

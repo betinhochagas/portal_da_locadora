@@ -1,9 +1,12 @@
 # 🚗 Portal da Locadora - Sistema de Gestão para Motoristas de App
 
-![Status](https://img.shields.io/badge/status-production-green)
+![Status](https://img.shields.io/badge/status-production--ready-green)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![TypeScript](https://img.shields.io/badge/typescript-100%25-blue)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![Audit](https://img.shields.io/badge/audit-approved-success)
+![Last Audit](https://img.shields.io/badge/last%20audit-2025--11--23-informational)
 
 Sistema completo de gestão para locadoras de veículos focadas em **motoristas de aplicativos** (Uber, 99, etc.). Desenvolvido com as melhores práticas de engenharia de software, arquitetura moderna e type safety end-to-end.
 

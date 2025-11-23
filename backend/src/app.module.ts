@@ -14,6 +14,7 @@ import { ManutencoesModule } from './modules/manutencoes/manutencoes.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { ContratoTemplatesModule } from './modules/contrato-templates/contrato-templates.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ContratoTemplatesModule } from './modules/contrato-templates/contrato-t
     AuditLogModule,
     UploadsModule,
     ContratoTemplatesModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

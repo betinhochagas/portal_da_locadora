@@ -58,8 +58,6 @@ export class PdfGeneratorService {
     contratoId: string,
     templateId?: string,
   ): Promise<Buffer> {
-    console.log(`[PDF] Buscando contrato: ${contratoId}`);
-    
     // Buscar contrato com relacionamentos
     const contrato = await this.prisma.contrato.findUnique({
       where: { id: contratoId },
@@ -71,14 +69,11 @@ export class PdfGeneratorService {
     });
 
     if (!contrato) {
-      console.error(`[PDF] Contrato não encontrado: ${contratoId}`);
       throw new NotFoundException(
         `Contrato com ID ${contratoId} não encontrado`,
       );
     }
 
-    console.log(`[PDF] Contrato encontrado: ${contrato.contractNumber} - Motorista: ${contrato.motorista.name}`);
-    
     // Verificar se o contrato tem todos os dados necessários
     if (!contrato.motorista) {
       throw new NotFoundException(
@@ -99,7 +94,6 @@ export class PdfGeneratorService {
     // Buscar template (específico ou ativo)
     let template: { conteudo: string; titulo: string } | null;
     if (templateId) {
-      console.log(`[PDF] Buscando template específico: ${templateId}`);
       template = await this.prisma.contratoTemplate.findUnique({
         where: { id: templateId },
       });
@@ -109,31 +103,18 @@ export class PdfGeneratorService {
         );
       }
     } else {
-      console.log('[PDF] Buscando template ativo...');
       template = await this.prisma.contratoTemplate.findFirst({
         where: { ativo: true },
         orderBy: { createdAt: 'desc' },
       });
       if (!template) {
-        console.error('[PDF] Nenhum template ativo encontrado');
         throw new NotFoundException(
           'Nenhum template ativo encontrado. Por favor, acesse /templates e ative ao menos um template de contrato antes de gerar o PDF.',
         );
       }
     }
-    
-    console.log(`[PDF] Template selecionado: ${template.titulo}`);
 
     // Preparar dados para substituição
-    console.log('[PDF] Preparando dados do contrato:', {
-      contratoId: contrato.id,
-      motorista: contrato.motorista.name,
-      veiculo: `${contrato.veiculo.plate} - ${contrato.veiculo.brand} ${contrato.veiculo.model}`,
-      plano: contrato.plano.name,
-      monthlyAmount: contrato.monthlyAmount,
-      deposit: contrato.deposit,
-    });
-
     const dados: ContratoDados = {
       motoristaNome: contrato.motorista.name,
       motoristaCpf: this.formatCPF(contrato.motorista.cpf || ''),
@@ -160,18 +141,15 @@ export class PdfGeneratorService {
       dataAtual: this.formatDate(new Date()),
     };
 
-    console.log('[PDF] Dados preparados com sucesso');
-
     // Substituir placeholders
-    console.log('[PDF] Substituindo placeholders...');
     const conteudoFinal = this.substituirPlaceholders(template.conteudo, dados);
-    console.log('[PDF] Placeholders substituídos');
 
     // Gerar PDF
-    console.log('[PDF] Gerando PDF...');
-    const pdfBuffer = await this.gerarPDF(conteudoFinal, contrato.contractNumber || 'S/N');
-    console.log(`[PDF] PDF gerado com sucesso! Tamanho: ${pdfBuffer.length} bytes`);
-    
+    const pdfBuffer = await this.gerarPDF(
+      conteudoFinal,
+      contrato.contractNumber || 'S/N',
+    );
+
     return pdfBuffer;
   }
 

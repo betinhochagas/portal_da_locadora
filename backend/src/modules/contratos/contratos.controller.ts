@@ -21,6 +21,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { PdfGeneratorService } from '../contrato-templates/pdf-generator.service';
+import { MailService } from '../mail/mail.service';
 
 @Controller('contratos')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,6 +30,7 @@ export class ContratosController {
   constructor(
     private readonly contratosService: ContratosService,
     private readonly pdfGeneratorService: PdfGeneratorService,
+    private readonly mailService: MailService,
   ) {}
 
   @Post()
@@ -120,7 +122,7 @@ export class ContratosController {
     console.log('🔥 Template ID:', templateId || 'não especificado');
     console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥');
     console.log('\n\n');
-    
+
     try {
       const pdfBuffer = await this.pdfGeneratorService.gerarContratoPDF(
         id,
@@ -141,6 +143,60 @@ export class ContratosController {
       } else {
         res.status(500).json({ message: 'Erro ao gerar PDF do contrato' });
       }
+    }
+  }
+
+  @Post(':id/enviar-email')
+  @Roles('ADMIN', 'DIRETORIA', 'GERENTE_LOJA', 'ATENDENTE', 'FINANCEIRO')
+  async enviarEmail(
+    @Param('id') id: string,
+    @Query('templateId') templateId: string | undefined,
+    @Body('email') email?: string,
+  ) {
+    try {
+      // Buscar dados do contrato
+      const contrato = await this.contratosService.findOne(id);
+      
+      if (!contrato) {
+        throw new Error('Contrato não encontrado');
+      }
+
+      if (!contrato.motorista) {
+        throw new Error('Contrato sem motorista associado');
+      }
+
+      // Usar email fornecido ou email do motorista
+      const destinatario = email || contrato.motorista.email;
+      
+      if (!destinatario) {
+        throw new Error('Email do destinatário não informado');
+      }
+
+      // Gerar PDF
+      const pdfBuffer = await this.pdfGeneratorService.gerarContratoPDF(
+        id,
+        templateId,
+      );
+
+      // Enviar email
+      await this.mailService.enviarContratoPDF(
+        destinatario,
+        contrato.motorista.name,
+        contrato.contractNumber,
+        pdfBuffer,
+      );
+
+      return {
+        success: true,
+        message: `Email enviado com sucesso para ${destinatario}`,
+      };
+    } catch (error) {
+      console.error('Erro ao enviar email:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao enviar email do contrato',
+      );
     }
   }
 }
