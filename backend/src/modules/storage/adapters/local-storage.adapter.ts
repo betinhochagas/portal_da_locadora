@@ -18,13 +18,16 @@ export class LocalStorageAdapter implements StorageAdapter {
     const filePath = path.join(this.uploadDir, filename);
 
     // If file is already saved by multer, just return the URL
-    // Otherwise, save it manually
     if (file.path && fs.existsSync(file.path)) {
       // File already saved by multer diskStorage
       return Promise.resolve(`/uploads/${filename}`);
     }
 
     // Save file buffer to disk
+    if (!file.buffer) {
+      throw new Error('File buffer is required when not using diskStorage');
+    }
+
     fs.writeFileSync(filePath, file.buffer);
     return Promise.resolve(`/uploads/${filename}`);
   }

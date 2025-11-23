@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
 import type { Response } from 'express';
 import { UploadsService } from './uploads.service';
 import { UploadDocumentoDto } from './dto/upload-documento.dto';
@@ -23,6 +22,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import { generateRandomFilename } from './utils/filename.util';
 
 @Controller('uploads')
 export class UploadsController {
@@ -43,11 +43,7 @@ export class UploadsController {
       storage: diskStorage({
         destination: './uploads',
         filename: (_req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
+          cb(null, generateRandomFilename(file.originalname));
         },
       }),
       limits: {
@@ -87,11 +83,7 @@ export class UploadsController {
 
     // Ensure filename is set (multer diskStorage sets this automatically)
     if (!file.filename) {
-      const randomName = Array(32)
-        .fill(null)
-        .map(() => Math.round(Math.random() * 16).toString(16))
-        .join('');
-      file.filename = `${randomName}${extname(file.originalname)}`;
+      file.filename = generateRandomFilename(file.originalname);
     }
 
     return this.uploadsService.uploadDocumento(file, dto, user.id);
@@ -125,12 +117,19 @@ export class UploadsController {
     const filePath = await this.uploadsService.getFilePath(id);
     const documento = await this.uploadsService.findOne(id);
 
-    res.setHeader('Content-Type', documento.mimeType);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${documento.nomeOriginal}"`,
-    );
-    res.sendFile(filePath);
+    // Check if filePath is a URL (S3 presigned URL) or local path
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      // For S3 presigned URLs, redirect to the URL
+      res.redirect(filePath);
+    } else {
+      // For local files, serve the file directly
+      res.setHeader('Content-Type', documento.mimeType);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${documento.nomeOriginal}"`,
+      );
+      res.sendFile(filePath);
+    }
   }
 
   @Get(':id/view')
@@ -138,13 +137,19 @@ export class UploadsController {
     const filePath = await this.uploadsService.getFilePath(id);
     const documento = await this.uploadsService.findOne(id);
 
-    // Para visualização (não força download)
-    res.setHeader('Content-Type', documento.mimeType);
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="${documento.nomeOriginal}"`,
-    );
-    res.sendFile(filePath);
+    // Check if filePath is a URL (S3 presigned URL) or local path
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      // For S3 presigned URLs, redirect to the URL
+      res.redirect(filePath);
+    } else {
+      // For local files, serve the file directly
+      res.setHeader('Content-Type', documento.mimeType);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${documento.nomeOriginal}"`,
+      );
+      res.sendFile(filePath);
+    }
   }
 
   @Delete(':id')
