@@ -2,15 +2,19 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadDocumentoDto } from './dto/upload-documento.dto';
-import * as fs from 'fs';
-import * as path from 'path';
+import type { StorageAdapter } from '../storage/storage.interface';
+import { STORAGE_ADAPTER } from '../storage/storage.module';
 
 @Injectable()
 export class UploadsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(STORAGE_ADAPTER) private storageAdapter: StorageAdapter,
+  ) {}
 
   async uploadDocumento(
     file: Express.Multer.File,
@@ -35,6 +39,9 @@ export class UploadsService {
       );
     }
 
+    // Save file using storage adapter
+    const fileUrl = await this.storageAdapter.saveFile(file, file.filename);
+
     // Criar registro no banco
     const documento = await this.prisma['documentoDigital'].create({
       data: {
@@ -43,7 +50,7 @@ export class UploadsService {
         nomeOriginal: file.originalname,
         tamanho: file.size,
         mimeType: file.mimetype,
-        url: `/uploads/${file.filename}`,
+        url: fileUrl,
         motoristaId: dto.motoristaId,
         veiculoId: dto.veiculoId,
         contratoId: dto.contratoId,
@@ -109,11 +116,8 @@ export class UploadsService {
   async remove(id: string) {
     const documento = await this.findOne(id);
 
-    // Remover arquivo físico
-    const filePath = path.join(process.cwd(), 'uploads', documento.nomeArquivo);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    // Delete file using storage adapter
+    await this.storageAdapter.deleteFile(documento.nomeArquivo);
 
     // Remover registro do banco
     await this.prisma['documentoDigital'].delete({
@@ -125,12 +129,6 @@ export class UploadsService {
 
   async getFilePath(id: string): Promise<string> {
     const documento = await this.findOne(id);
-    const filePath = path.join(process.cwd(), 'uploads', documento.nomeArquivo);
-
-    if (!fs.existsSync(filePath)) {
-      throw new NotFoundException('Arquivo não encontrado no servidor');
-    }
-
-    return filePath;
+    return this.storageAdapter.getFilePath(documento.nomeArquivo);
   }
 }

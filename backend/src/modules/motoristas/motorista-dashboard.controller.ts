@@ -5,9 +5,7 @@ import { MotoristaAuthGuard } from '../../common/guards/motorista-auth.guard';
 @Controller('motorista/dashboard')
 @UseGuards(MotoristaAuthGuard)
 export class MotoristaDashboardController {
-  constructor(
-    private readonly dashboardService: MotoristaDashboardService,
-  ) {}
+  constructor(private readonly dashboardService: MotoristaDashboardService) {}
 
   @Get()
   async getDashboard(@Req() req: any) {

@@ -156,7 +156,7 @@ export class ContratosController {
     try {
       // Buscar dados do contrato
       const contrato = await this.contratosService.findOne(id);
-      
+
       if (!contrato) {
         throw new Error('Contrato não encontrado');
       }
@@ -167,7 +167,7 @@ export class ContratosController {
 
       // Usar email fornecido ou email do motorista
       const destinatario = email || contrato.motorista.email;
-      
+
       if (!destinatario) {
         throw new Error('Email do destinatário não informado');
       }

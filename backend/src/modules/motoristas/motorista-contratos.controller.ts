@@ -5,9 +5,7 @@ import { MotoristaAuthGuard } from '../../common/guards/motorista-auth.guard';
 @Controller('motorista/contratos')
 @UseGuards(MotoristaAuthGuard)
 export class MotoristaContratosController {
-  constructor(
-    private readonly contratosService: MotoristaContratosService,
-  ) {}
+  constructor(private readonly contratosService: MotoristaContratosService) {}
 
   @Get()
   async getContratos(@Req() req: any) {
