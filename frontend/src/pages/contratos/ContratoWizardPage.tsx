@@ -515,7 +515,7 @@ export default function ContratoWizardPage() {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={wizardData.monthlyAmount || 0}
+                    value={wizardData.monthlyAmount || ''}
                     onChange={(e) =>
                       setWizardData({
                         ...wizardData,
@@ -523,6 +523,7 @@ export default function ContratoWizardPage() {
                       })
                     }
                     className="input"
+                    placeholder="Digite o valor"
                     required
                   />
                 </div>
@@ -533,7 +534,7 @@ export default function ContratoWizardPage() {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={wizardData.deposit || 0}
+                    value={wizardData.deposit || ''}
                     onChange={(e) =>
                       setWizardData({
                         ...wizardData,
@@ -541,6 +542,7 @@ export default function ContratoWizardPage() {
                       })
                     }
                     className="input"
+                    placeholder="Digite o valor da caução (opcional)"
                   />
                 </div>
 
@@ -549,7 +551,7 @@ export default function ContratoWizardPage() {
                   <input
                     type="number"
                     min="0"
-                    value={wizardData.kmStart || 0}
+                    value={wizardData.kmStart || ''}
                     onChange={(e) =>
                       setWizardData({
                         ...wizardData,
@@ -557,6 +559,7 @@ export default function ContratoWizardPage() {
                       })
                     }
                     className="input"
+                    placeholder="Digite a quilometragem inicial"
                     required
                   />
                 </div>
