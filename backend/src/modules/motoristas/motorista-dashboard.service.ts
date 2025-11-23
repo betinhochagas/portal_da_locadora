@@ -38,7 +38,9 @@ export class MotoristaDashboardService {
     const contratoAtivo = motorista.contratos.find((c) => c.status === 'ATIVO');
 
     // Buscar informações do veículo atual
-    let veiculoInfo: { id: string; modelo: string; placa: string; ano: number } | undefined;
+    let veiculoInfo:
+      | { id: string; modelo: string; placa: string; ano: number }
+      | undefined;
     if (contratoAtivo && contratoAtivo.veiculo) {
       veiculoInfo = {
         id: contratoAtivo.veiculo.id,

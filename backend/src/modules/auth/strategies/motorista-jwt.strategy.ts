@@ -11,7 +11,8 @@ export class MotoristaJwtStrategy extends PassportStrategy(
   constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      secretOrKey:
+        process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     });
   }
 

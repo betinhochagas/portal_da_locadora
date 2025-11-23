@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -15,10 +16,15 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { ContratoTemplatesModule } from './modules/contrato-templates/contrato-templates.module';
 import { MailModule } from './modules/mail/mail.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     PrismaModule,
+    StorageModule,
     AuthModule,
     MotoristasModule,
     VeiculosModule,

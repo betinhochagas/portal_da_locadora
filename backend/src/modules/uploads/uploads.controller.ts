@@ -85,6 +85,15 @@ export class UploadsController {
       throw new BadRequestException('Nenhum arquivo enviado');
     }
 
+    // Ensure filename is set (multer diskStorage sets this automatically)
+    if (!file.filename) {
+      const randomName = Array(32)
+        .fill(null)
+        .map(() => Math.round(Math.random() * 16).toString(16))
+        .join('');
+      file.filename = `${randomName}${extname(file.originalname)}`;
+    }
+
     return this.uploadsService.uploadDocumento(file, dto, user.id);
   }
 
