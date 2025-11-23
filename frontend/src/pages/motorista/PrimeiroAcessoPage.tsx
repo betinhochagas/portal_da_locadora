@@ -44,12 +44,13 @@ export const PrimeiroAcessoPage = () => {
       });
 
       navigate('/motorista/dashboard');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro no primeiro acesso:', err);
       
-      if (err.response?.status === 401) {
+      const error = err as { response?: { status?: number; data?: { message?: string } } };
+      if (error.response?.status === 401) {
         setError('Senha atual incorreta.');
-      } else if (err.response?.data?.message) {
+      } else if (error.response?.data?.message) {
         setError(err.response.data.message);
       } else {
         setError('Erro ao trocar senha. Tente novamente.');

@@ -36,7 +36,9 @@ export class MailService {
     pdfBuffer: Buffer,
   ): Promise<void> {
     try {
-      this.logger.log(`Enviando contrato ${numeroContrato} para ${destinatario}`);
+      this.logger.log(
+        `Enviando contrato ${numeroContrato} para ${destinatario}`,
+      );
 
       const info = await this.transporter.sendMail({
         from: `"Portal da Locadora" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
@@ -76,8 +78,13 @@ export class MailService {
 
       this.logger.log(`Email enviado com sucesso: ${info.messageId}`);
     } catch (error) {
-      this.logger.error(`Erro ao enviar email: ${error.message}`, error.stack);
-      throw new Error('Falha ao enviar email. Verifique as configurações de SMTP.');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorStack = error instanceof Error ? error.stack : '';
+      this.logger.error(`Erro ao enviar email: ${errorMessage}`, errorStack);
+      throw new Error(
+        'Falha ao enviar email. Verifique as configurações de SMTP.',
+      );
     }
   }
 
@@ -90,7 +97,9 @@ export class MailService {
       this.logger.log('Conexão com servidor de email verificada com sucesso');
       return true;
     } catch (error) {
-      this.logger.error(`Erro ao verificar conexão de email: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Erro desconhecido';
+      this.logger.error(`Erro ao verificar conexão de email: ${errorMessage}`);
       return false;
     }
   }

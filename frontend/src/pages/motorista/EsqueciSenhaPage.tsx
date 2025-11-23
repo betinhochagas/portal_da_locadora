@@ -47,11 +47,12 @@ export const EsqueciSenhaPage = () => {
       await esqueciSenha({ cpf: cpfNumbers });
       setSuccess(true);
       setCpf('');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao solicitar reset:', err);
       
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
+      const error = err as { response?: { data?: { message?: string } } };
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
       } else {
         setError('Erro ao solicitar nova senha. Tente novamente.');
       }
