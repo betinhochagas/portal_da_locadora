@@ -211,7 +211,7 @@ export class MotoristaAuthService {
     };
   }
 
-  async resetSenha(dto: MotoristaResetSenhaDto) {
+  async resetSenha() {
     // TODO: Validar token e resetar senha
     throw new BadRequestException('Funcionalidade em desenvolvimento');
   }

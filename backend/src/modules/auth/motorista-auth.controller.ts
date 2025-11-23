@@ -1,12 +1,24 @@
-import { Controller, Post, Body, UseGuards, Req, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+} from '@nestjs/common';
 import { MotoristaAuthService } from './motorista-auth.service';
 import { MotoristaAuthGuard } from '../../common/guards/motorista-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import {
   MotoristaLoginDto,
   MotoristaPrimeiroAcessoDto,
   MotoristaEsqueciSenhaDto,
   MotoristaResetSenhaDto,
 } from './dto/motorista-auth.dto';
+
+interface MotoristaUser {
+  id: string;
+  type: string;
+}
 
 @Controller('auth/motorista')
 export class MotoristaAuthController {
@@ -20,10 +32,10 @@ export class MotoristaAuthController {
   @Post('primeiro-acesso')
   @UseGuards(MotoristaAuthGuard)
   async primeiroAcesso(
-    @Req() req: any,
+    @CurrentUser() user: MotoristaUser,
     @Body() dto: MotoristaPrimeiroAcessoDto,
   ) {
-    return this.motoristaAuthService.primeiroAcesso(req.user.id, dto);
+    return this.motoristaAuthService.primeiroAcesso(user.id, dto);
   }
 
   @Post('esqueci-senha')
@@ -32,13 +44,13 @@ export class MotoristaAuthController {
   }
 
   @Post('reset-senha')
-  async resetSenha(@Body() dto: MotoristaResetSenhaDto) {
-    return this.motoristaAuthService.resetSenha(dto);
+  async resetSenha(@Body() _dto: MotoristaResetSenhaDto) {
+    return this.motoristaAuthService.resetSenha();
   }
 
   @Get('profile')
   @UseGuards(MotoristaAuthGuard)
-  async getProfile(@Req() req: any) {
-    return req.user;
+  getProfile(@CurrentUser() user: MotoristaUser) {
+    return user;
   }
 }

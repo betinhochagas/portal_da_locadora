@@ -233,18 +233,38 @@ export class ContratosService {
     }
 
     // Preparar dados para atualização (apenas campos permitidos)
-    const dataToUpdate: any = {};
-    
-    if (updateContratoDto.startDate !== undefined) dataToUpdate.startDate = updateContratoDto.startDate;
-    if (updateContratoDto.endDate !== undefined) dataToUpdate.endDate = updateContratoDto.endDate;
-    if (updateContratoDto.billingDay !== undefined) dataToUpdate.billingDay = updateContratoDto.billingDay;
-    if (updateContratoDto.monthlyAmount !== undefined) dataToUpdate.monthlyAmount = updateContratoDto.monthlyAmount.toString();
-    if (updateContratoDto.deposit !== undefined) dataToUpdate.deposit = updateContratoDto.deposit?.toString();
-    if (updateContratoDto.kmStart !== undefined) dataToUpdate.kmStart = updateContratoDto.kmStart;
-    if (updateContratoDto.kmCurrent !== undefined) dataToUpdate.kmCurrent = updateContratoDto.kmCurrent;
-    if (updateContratoDto.notes !== undefined) dataToUpdate.notes = updateContratoDto.notes;
-    if (updateContratoDto.status !== undefined) dataToUpdate.status = updateContratoDto.status;
-    if (updateContratoDto.cancelReason !== undefined) dataToUpdate.cancelReason = updateContratoDto.cancelReason;
+    const dataToUpdate: Record<string, unknown> = {};
+
+    if (updateContratoDto.startDate !== undefined) {
+      dataToUpdate.startDate = updateContratoDto.startDate;
+    }
+    if (updateContratoDto.endDate !== undefined) {
+      dataToUpdate.endDate = updateContratoDto.endDate;
+    }
+    if (updateContratoDto.billingDay !== undefined) {
+      dataToUpdate.billingDay = updateContratoDto.billingDay;
+    }
+    if (updateContratoDto.monthlyAmount !== undefined) {
+      dataToUpdate.monthlyAmount = updateContratoDto.monthlyAmount.toString();
+    }
+    if (updateContratoDto.deposit !== undefined) {
+      dataToUpdate.deposit = updateContratoDto.deposit?.toString();
+    }
+    if (updateContratoDto.kmStart !== undefined) {
+      dataToUpdate.kmStart = updateContratoDto.kmStart;
+    }
+    if (updateContratoDto.kmCurrent !== undefined) {
+      dataToUpdate.kmCurrent = updateContratoDto.kmCurrent;
+    }
+    if (updateContratoDto.notes !== undefined) {
+      dataToUpdate.notes = updateContratoDto.notes;
+    }
+    if (updateContratoDto.status !== undefined) {
+      dataToUpdate.status = updateContratoDto.status;
+    }
+    if (updateContratoDto.cancelReason !== undefined) {
+      dataToUpdate.cancelReason = updateContratoDto.cancelReason;
+    }
 
     const updated = await this.prisma.contrato.update({
       where: { id },
@@ -369,11 +389,11 @@ export class ContratosService {
     const contrato = await this.findOne(id);
 
     const statusPermitidos: ContractStatus[] = [
-      ContractStatus.ATIVO, 
-      ContractStatus.SUSPENSO, 
-      ContractStatus.ANALISE
+      ContractStatus.ATIVO,
+      ContractStatus.SUSPENSO,
+      ContractStatus.ANALISE,
     ];
-    
+
     if (!statusPermitidos.includes(contrato.status)) {
       throw new BadRequestException(
         'Apenas contratos ativos, suspensos ou em análise podem ser cancelados',

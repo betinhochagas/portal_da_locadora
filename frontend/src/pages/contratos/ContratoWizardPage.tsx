@@ -79,10 +79,11 @@ export default function ContratoWizardPage() {
       queryClient.invalidateQueries({ queryKey: ['contratos'] });
       navigate('/contratos');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       console.error('Erro ao criar contrato:', error);
-      console.error('Resposta do servidor:', error.response?.data);
-      alert(`Erro ao criar contrato: ${error.response?.data?.message || error.message}`);
+      console.error('Resposta do servidor:', err.response?.data);
+      alert(`Erro ao criar contrato: ${err.response?.data?.message || err.message || 'Erro desconhecido'}`);
     },
   });
 
@@ -97,7 +98,7 @@ export default function ContratoWizardPage() {
       
       return (
         m.name.toLowerCase().includes(search) ||
-        m.cpf?.replace(/[.\-]/g, '').includes(searchClean) ||
+        m.cpf?.replace(/[.-]/g, '').includes(searchClean) ||
         m.cnpj?.replace(/[.\-/]/g, '').includes(searchClean)
       );
     }
@@ -131,8 +132,9 @@ export default function ContratoWizardPage() {
   const handleSubmit = () => {
     if (!isStep5Valid()) return;
     
-    // Gerar número de contrato único
-    const contractNumber = `CONT-${Date.now()}`;
+    // Gerar número de contrato único baseado em timestamp
+    const timestamp = Date.now();
+    const contractNumber = `CONT-${timestamp}`;
     
     // Validar e converter valores
     const monthlyValue = Number(wizardData.monthlyAmount);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { motoristaAuthService } from '../services/motorista-auth.service';
 import type {
@@ -9,7 +9,7 @@ import type {
   ResetSenhaDto,
 } from '../types/motorista';
 
-interface MotoristaAuthContextData {
+export interface MotoristaAuthContextData {
   motorista: Motorista | null;
   loading: boolean;
   isAuthenticated: boolean;
@@ -22,7 +22,7 @@ interface MotoristaAuthContextData {
   refreshProfile: () => Promise<void>;
 }
 
-const MotoristaAuthContext = createContext<MotoristaAuthContextData>({} as MotoristaAuthContextData);
+export const MotoristaAuthContext = createContext<MotoristaAuthContextData>({} as MotoristaAuthContextData);
 
 interface MotoristaAuthProviderProps {
   children: ReactNode;
@@ -33,29 +33,32 @@ export const MotoristaAuthProvider: React.FC<MotoristaAuthProviderProps> = ({ ch
   const [loading, setLoading] = useState(true);
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
 
-  // Verificar se há token salvo ao carregar
+  // Carrega motorista do localStorage ao montar
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const token = motoristaAuthService.getToken();
-        const savedMotorista = motoristaAuthService.getMotorista();
-
-        if (token && savedMotorista) {
-          setMotorista(savedMotorista);
-          setNeedsPasswordReset(savedMotorista.passwordReset || false);
-          // Não validar token na inicialização para evitar erro 404
-          // A validação será feita quando o usuário tentar acessar rotas protegidas
+    const loadMotorista = async () => {
+      const token = motoristaAuthService.getToken();
+      const savedMotorista = motoristaAuthService.getMotorista();
+      
+      if (token && savedMotorista) {
+        setMotorista(savedMotorista);
+        setNeedsPasswordReset(savedMotorista.passwordReset || false);
+        
+        // Tenta atualizar perfil do servidor
+        try {
+          const updatedMotorista = await motoristaAuthService.getProfile();
+          motoristaAuthService.saveMotorista(updatedMotorista);
+          setMotorista(updatedMotorista);
+          setNeedsPasswordReset(updatedMotorista.passwordReset || false);
+        } catch (error) {
+          console.error('Erro ao carregar perfil atualizado:', error);
+          // Se falhar, mantém dados do localStorage
         }
-      } catch (error) {
-        console.error('Erro ao inicializar autenticação:', error);
-        // Limpar dados inválidos
-        logout();
-      } finally {
-        setLoading(false);
       }
+      
+      setLoading(false);
     };
-
-    initAuth();
+    
+    loadMotorista();
   }, []);
 
   const login = async (dto: MotoristaLoginDto): Promise<void> => {
@@ -67,7 +70,7 @@ export const MotoristaAuthProvider: React.FC<MotoristaAuthProviderProps> = ({ ch
       
       setMotorista(response.motorista);
       setNeedsPasswordReset(response.motorista.passwordReset || false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro no login:', error);
       throw error;
     }
@@ -82,7 +85,7 @@ export const MotoristaAuthProvider: React.FC<MotoristaAuthProviderProps> = ({ ch
       
       setMotorista(response.motorista);
       setNeedsPasswordReset(false); // Senha resetada
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro no primeiro acesso:', error);
       throw error;
     }
@@ -92,7 +95,7 @@ export const MotoristaAuthProvider: React.FC<MotoristaAuthProviderProps> = ({ ch
     try {
       const response = await motoristaAuthService.esqueciSenha(dto);
       return response;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao solicitar reset de senha:', error);
       throw error;
     }
@@ -102,7 +105,7 @@ export const MotoristaAuthProvider: React.FC<MotoristaAuthProviderProps> = ({ ch
     try {
       const response = await motoristaAuthService.resetSenha(dto);
       return response;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao resetar senha:', error);
       throw error;
     }
@@ -146,8 +149,8 @@ export const MotoristaAuthProvider: React.FC<MotoristaAuthProviderProps> = ({ ch
   );
 };
 
-export const useMotoristaAuth = (): MotoristaAuthContextData => {
-  const context = useContext(MotoristaAuthContext);
+export const useMotoristaAuth = () => {
+  const context = React.useContext(MotoristaAuthContext);
   
   if (!context) {
     throw new Error('useMotoristaAuth must be used within MotoristaAuthProvider');

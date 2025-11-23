@@ -11,11 +11,12 @@ export class MotoristaJwtStrategy extends PassportStrategy(
   constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      secretOrKey:
+        process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: { type: string; motoristaId: string }) {
     // Verifica se é token de motorista
     if (payload.type !== 'motorista') {
       throw new UnauthorizedException('Token inválido');
