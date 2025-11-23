@@ -88,9 +88,12 @@ export class PdfGeneratorService {
     } else {
       template = await this.prisma.contratoTemplate.findFirst({
         where: { ativo: true },
+        orderBy: { createdAt: 'desc' },
       });
       if (!template) {
-        throw new NotFoundException('Nenhum template ativo encontrado');
+        throw new NotFoundException(
+          'Nenhum template ativo encontrado. Por favor, ative ao menos um template de contrato antes de gerar o PDF.',
+        );
       }
     }
 

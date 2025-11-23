@@ -113,17 +113,26 @@ export class ContratosController {
     @Query('templateId') templateId: string | undefined,
     @Res() res: Response,
   ) {
-    const pdfBuffer = await this.pdfGeneratorService.gerarContratoPDF(
-      id,
-      templateId,
-    );
+    try {
+      const pdfBuffer = await this.pdfGeneratorService.gerarContratoPDF(
+        id,
+        templateId,
+      );
 
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=contrato-${id}.pdf`,
-      'Content-Length': pdfBuffer.length,
-    });
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename=contrato-${id}.pdf`,
+        'Content-Length': pdfBuffer.length,
+      });
 
-    res.end(pdfBuffer);
+      res.end(pdfBuffer);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: 'Erro ao gerar PDF do contrato' });
+      }
+    }
   }
 }
