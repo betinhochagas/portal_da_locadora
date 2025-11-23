@@ -80,11 +80,18 @@ export default function ContratoWizardPage() {
 
   // Filtros
   const motoristasAtivos = motoristas.filter(
-    (m) =>
-      m.status === 'ATIVO' &&
-      (m.name.toLowerCase().includes(searchMotorista.toLowerCase()) ||
-        m.cpf?.includes(searchMotorista) ||
-        m.cnpj?.includes(searchMotorista)),
+    (m) => {
+      if (m.status !== 'ATIVO') return false;
+      
+      const search = searchMotorista.toLowerCase();
+      const searchClean = search.replace(/[.\-/]/g, ''); // Remove pontuação
+      
+      return (
+        m.name.toLowerCase().includes(search) ||
+        m.cpf?.replace(/[.\-]/g, '').includes(searchClean) ||
+        m.cnpj?.replace(/[.\-/]/g, '').includes(searchClean)
+      );
+    }
   );
 
   const veiculosDisponiveis = veiculos.filter(
