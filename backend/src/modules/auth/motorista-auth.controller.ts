@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Get,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { MotoristaAuthService } from './motorista-auth.service';
 import { MotoristaAuthGuard } from '../../common/guards/motorista-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -12,7 +6,6 @@ import {
   MotoristaLoginDto,
   MotoristaPrimeiroAcessoDto,
   MotoristaEsqueciSenhaDto,
-  MotoristaResetSenhaDto,
 } from './dto/motorista-auth.dto';
 
 interface MotoristaUser {
@@ -44,7 +37,7 @@ export class MotoristaAuthController {
   }
 
   @Post('reset-senha')
-  async resetSenha(@Body() _dto: MotoristaResetSenhaDto) {
+  resetSenha() {
     return this.motoristaAuthService.resetSenha();
   }
 

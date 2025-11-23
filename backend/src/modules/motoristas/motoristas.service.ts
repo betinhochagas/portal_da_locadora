@@ -155,7 +155,7 @@ export class MotoristasService {
 
   async resetPassword(id: string) {
     // Verificar se motorista existe
-    const motorista = await this.findOne(id);
+    await this.findOne(id);
 
     // Gera nova senha aleatória
     const novaSenhaGerada = this.gerarSenhaAleatoria();

@@ -71,8 +71,38 @@ export default function ContratoWizardPage() {
   });
 
   const createContratoMutation = useMutation({
-    mutationFn: async (data: WizardData) => {
-      const response = await api.post('/contratos', data);
+    mutationFn: async (wizardData: WizardData) => {
+      // Gerar número de contrato único baseado em timestamp
+      const timestamp = Date.now();
+      const contractNumber = `CONT-${timestamp}`;
+      
+      // Validar e converter valores
+      const monthlyValue = Number(wizardData.monthlyAmount);
+      const depositValue = Number(wizardData.deposit || 0);
+      const kmStartValue = Number(wizardData.kmStart || 0);
+      
+      const startDateISO = new Date(wizardData.startDate + 'T00:00:00').toISOString();
+      const endDateISO = new Date(wizardData.endDate + 'T23:59:59').toISOString();
+      
+      // Preparar dados com conversões necessárias
+      // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
+      const payload = {
+        contractNumber,
+        motoristaId: wizardData.motoristaId!,
+        veiculoId: wizardData.veiculoId!,
+        planoId: wizardData.planoId!,
+        filialId: wizardData.filialId!,
+        startDate: startDateISO,
+        endDate: endDateISO,
+        billingDay: Number(wizardData.billingDay),
+        monthlyAmount: monthlyValue.toFixed(2),
+        deposit: depositValue.toFixed(2),
+        kmStart: kmStartValue,
+        notes: wizardData.notes || '',
+      };
+      
+      console.log('Enviando contrato:', payload);
+      const response = await api.post('/contratos', payload);
       return response.data;
     },
     onSuccess: () => {
@@ -132,44 +162,16 @@ export default function ContratoWizardPage() {
   const handleSubmit = () => {
     if (!isStep5Valid()) return;
     
-    // Gerar número de contrato único baseado em timestamp
-    const timestamp = Date.now();
-    const contractNumber = `CONT-${timestamp}`;
-    
-    // Validar e converter valores
+    // Validar valores numéricos básicos
     const monthlyValue = Number(wizardData.monthlyAmount);
-    const depositValue = Number(wizardData.deposit || 0);
-    const kmStartValue = Number(wizardData.kmStart || 0);
     
     if (isNaN(monthlyValue) || monthlyValue <= 0) {
       alert('Valor mensal inválido');
       return;
     }
     
-    // Converter datas para ISO-8601 (com timezone)
-    // Os campos input[type="date"] retornam YYYY-MM-DD, precisamos adicionar o horário
-    const startDateISO = new Date(wizardData.startDate + 'T00:00:00').toISOString();
-    const endDateISO = new Date(wizardData.endDate + 'T23:59:59').toISOString();
-    
-    // Preparar dados com conversões necessárias
-    // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
-    const payload = {
-      contractNumber,
-      motoristaId: wizardData.motoristaId,
-      veiculoId: wizardData.veiculoId,
-      planoId: wizardData.planoId,
-      filialId: wizardData.filialId,
-      startDate: startDateISO,
-      endDate: endDateISO,
-      billingDay: Number(wizardData.billingDay),
-      monthlyAmount: monthlyValue.toFixed(2),
-      deposit: depositValue.toFixed(2),
-      kmStart: kmStartValue,
-      notes: wizardData.notes || '',
-    };
-    
-    console.log('Enviando contrato:', payload);
-    createContratoMutation.mutate(payload as any);
+    // Passar dados do wizard para a mutation que fará as conversões
+    createContratoMutation.mutate(wizardData);
   };
 
   const isStep1Valid = () => !!wizardData.motoristaId;

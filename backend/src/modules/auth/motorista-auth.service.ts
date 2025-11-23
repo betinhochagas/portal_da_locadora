@@ -10,7 +10,6 @@ import {
   MotoristaLoginDto,
   MotoristaPrimeiroAcessoDto,
   MotoristaEsqueciSenhaDto,
-  MotoristaResetSenhaDto,
 } from './dto/motorista-auth.dto';
 
 @Injectable()
@@ -211,7 +210,7 @@ export class MotoristaAuthService {
     };
   }
 
-  async resetSenha() {
+  resetSenha() {
     // TODO: Validar token e resetar senha
     throw new BadRequestException('Funcionalidade em desenvolvimento');
   }

@@ -81,7 +81,7 @@ export default function PlanoFormPage() {
   const mutation = useMutation({
     mutationFn: async (data: CreatePlanoDto | UpdatePlanoDto) => {
       // Garantir que valores numéricos estão corretos e remover campos undefined/vazios
-      const cleanData: any = {
+      const cleanData: Record<string, unknown> = {
         name: data.name,
         description: data.description || undefined,
         dailyPrice: Number(data.dailyPrice) || 0,
@@ -119,10 +119,11 @@ export default function PlanoFormPage() {
       queryClient.invalidateQueries({ queryKey: ['planos'] });
       navigate('/planos');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       console.error('Erro ao salvar plano:', error);
-      console.error('Resposta do servidor:', error.response?.data);
-      alert(`Erro ao salvar plano: ${error.response?.data?.message || error.message}`);
+      console.error('Resposta do servidor:', err.response?.data);
+      alert(`Erro ao salvar plano: ${err.response?.data?.message || err.message || 'Erro desconhecido'}`);
     },
   });
 

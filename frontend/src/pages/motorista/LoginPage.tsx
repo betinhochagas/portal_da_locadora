@@ -58,11 +58,12 @@ export const MotoristaLoginPage = () => {
       } else {
         navigate('/motorista/dashboard');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro no login:', err);
       
+      const error = err as { response?: { status?: number; data?: { message?: string } } };
       // Mensagens de erro amigáveis
-      if (err.response?.status === 401) {
+      if (error.response?.status === 401) {
         setError('CPF ou senha incorretos.');
       } else if (err.response?.status === 403) {
         setError(err.response?.data?.message || 'Acesso bloqueado. Entre em contato com a locadora.');
