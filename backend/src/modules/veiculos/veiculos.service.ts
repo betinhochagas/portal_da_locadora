@@ -51,6 +51,11 @@ export class VeiculosService {
       include: {
         filial: true,
         contratos: {
+          where: {
+            status: {
+              in: ['RASCUNHO', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+            },
+          },
           include: {
             motorista: {
               select: {

@@ -16,6 +16,11 @@ export class MotoristasService {
     return this.prisma.motorista.findMany({
       include: {
         contratos: {
+          where: {
+            status: {
+              in: ['RASCUNHO', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+            },
+          },
           select: {
             id: true,
             contractNumber: true,
@@ -34,6 +39,11 @@ export class MotoristasService {
       where: { id },
       include: {
         contratos: {
+          where: {
+            status: {
+              in: ['RASCUNHO', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+            },
+          },
           include: {
             veiculo: {
               select: {
