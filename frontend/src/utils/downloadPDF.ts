@@ -17,7 +17,8 @@ export async function downloadContratoPDF(
     }`;
 
     // Make API request with blob response type
-    const response = await api.post(url, null, {
+    // Não enviar body (undefined) para evitar erro de parse JSON
+    const response = await api.post(url, undefined, {
       responseType: 'blob',
     });
 
