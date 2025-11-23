@@ -79,6 +79,11 @@ export default function ContratoWizardPage() {
       queryClient.invalidateQueries({ queryKey: ['contratos'] });
       navigate('/contratos');
     },
+    onError: (error: any) => {
+      console.error('Erro ao criar contrato:', error);
+      console.error('Resposta do servidor:', error.response?.data);
+      alert(`Erro ao criar contrato: ${error.response?.data?.message || error.message}`);
+    },
   });
 
   // Filtros
@@ -129,15 +134,31 @@ export default function ContratoWizardPage() {
     // Gerar número de contrato único
     const contractNumber = `CONT-${Date.now()}`;
     
+    // Validar e converter valores
+    const monthlyValue = Number(wizardData.monthlyAmount);
+    const depositValue = Number(wizardData.deposit || 0);
+    const kmStartValue = Number(wizardData.kmStart || 0);
+    
+    if (isNaN(monthlyValue) || monthlyValue <= 0) {
+      alert('Valor mensal inválido');
+      return;
+    }
+    
     // Preparar dados com conversões necessárias
     // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
     const payload = {
-      ...wizardData,
       contractNumber,
-      monthlyAmount: String(Number(wizardData.monthlyAmount || 0).toFixed(2)),
-      deposit: String(Number(wizardData.deposit || 0).toFixed(2)),
-      kmStart: Number(wizardData.kmStart || 0),
+      motoristaId: wizardData.motoristaId,
+      veiculoId: wizardData.veiculoId,
+      planoId: wizardData.planoId,
+      filialId: wizardData.filialId,
+      startDate: wizardData.startDate,
+      endDate: wizardData.endDate,
       billingDay: Number(wizardData.billingDay),
+      monthlyAmount: monthlyValue.toFixed(2),
+      deposit: depositValue.toFixed(2),
+      kmStart: kmStartValue,
+      notes: wizardData.notes || '',
     };
     
     console.log('Enviando contrato:', payload);
