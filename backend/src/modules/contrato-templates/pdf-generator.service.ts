@@ -58,6 +58,8 @@ export class PdfGeneratorService {
     contratoId: string,
     templateId?: string,
   ): Promise<Buffer> {
+    console.log(`[PDF] Buscando contrato: ${contratoId}`);
+    
     // Buscar contrato com relacionamentos
     const contrato = await this.prisma.contrato.findUnique({
       where: { id: contratoId },
@@ -69,14 +71,35 @@ export class PdfGeneratorService {
     });
 
     if (!contrato) {
+      console.error(`[PDF] Contrato não encontrado: ${contratoId}`);
       throw new NotFoundException(
         `Contrato com ID ${contratoId} não encontrado`,
       );
     }
 
+    console.log(`[PDF] Contrato encontrado: ${contrato.contractNumber} - Motorista: ${contrato.motorista.name}`);
+    
+    // Verificar se o contrato tem todos os dados necessários
+    if (!contrato.motorista) {
+      throw new NotFoundException(
+        `Contrato ${contrato.contractNumber} não possui motorista associado`,
+      );
+    }
+    if (!contrato.veiculo) {
+      throw new NotFoundException(
+        `Contrato ${contrato.contractNumber} não possui veículo associado`,
+      );
+    }
+    if (!contrato.plano) {
+      throw new NotFoundException(
+        `Contrato ${contrato.contractNumber} não possui plano associado`,
+      );
+    }
+
     // Buscar template (específico ou ativo)
-    let template: { conteudo: string } | null;
+    let template: { conteudo: string; titulo: string } | null;
     if (templateId) {
+      console.log(`[PDF] Buscando template específico: ${templateId}`);
       template = await this.prisma.contratoTemplate.findUnique({
         where: { id: templateId },
       });
@@ -86,16 +109,20 @@ export class PdfGeneratorService {
         );
       }
     } else {
+      console.log('[PDF] Buscando template ativo...');
       template = await this.prisma.contratoTemplate.findFirst({
         where: { ativo: true },
         orderBy: { createdAt: 'desc' },
       });
       if (!template) {
+        console.error('[PDF] Nenhum template ativo encontrado');
         throw new NotFoundException(
-          'Nenhum template ativo encontrado. Por favor, ative ao menos um template de contrato antes de gerar o PDF.',
+          'Nenhum template ativo encontrado. Por favor, acesse /templates e ative ao menos um template de contrato antes de gerar o PDF.',
         );
       }
     }
+    
+    console.log(`[PDF] Template selecionado: ${template.titulo}`);
 
     // Preparar dados para substituição
     const dados: ContratoDados = {
