@@ -113,6 +113,12 @@ export class ContratosController {
     @Query('templateId') templateId: string | undefined,
     @Res() res: Response,
   ) {
+    console.log('========================================');
+    console.log('[CONTROLLER] Recebeu requisição para gerar PDF');
+    console.log('[CONTROLLER] Contrato ID:', id);
+    console.log('[CONTROLLER] Template ID:', templateId || 'não especificado');
+    console.log('========================================');
+    
     try {
       const pdfBuffer = await this.pdfGeneratorService.gerarContratoPDF(
         id,
