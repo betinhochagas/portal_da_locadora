@@ -7,14 +7,19 @@ export class FiliaisService {
 
   async findAll() {
     return this.prisma.filial.findMany({
-      where: {
-        active: true,
-      },
       select: {
         id: true,
         name: true,
+        cnpj: true,
+        phone: true,
+        email: true,
+        address: true,
         city: true,
         state: true,
+        zipCode: true,
+        active: true,
+        createdAt: true,
+        updatedAt: true,
       },
       orderBy: {
         name: 'asc',
