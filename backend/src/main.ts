@@ -12,6 +12,17 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  // Log de todas as requisições (DEBUG)
+  app.use((req: any, res: any, next: any) => {
+    if (req.url.includes('gerar-pdf')) {
+      console.log('\n📥 [MIDDLEWARE] Requisição recebida:');
+      console.log('   URL:', req.method, req.url);
+      console.log('   Headers:', req.headers.authorization ? 'Token presente' : 'SEM TOKEN');
+      console.log('');
+    }
+    next();
+  });
+
   // Global Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({
