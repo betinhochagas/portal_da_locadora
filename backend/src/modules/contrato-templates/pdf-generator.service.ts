@@ -125,6 +125,15 @@ export class PdfGeneratorService {
     console.log(`[PDF] Template selecionado: ${template.titulo}`);
 
     // Preparar dados para substituição
+    console.log('[PDF] Preparando dados do contrato:', {
+      contratoId: contrato.id,
+      motorista: contrato.motorista.name,
+      veiculo: `${contrato.veiculo.plate} - ${contrato.veiculo.brand} ${contrato.veiculo.model}`,
+      plano: contrato.plano.name,
+      monthlyAmount: contrato.monthlyAmount,
+      deposit: contrato.deposit,
+    });
+
     const dados: ContratoDados = {
       motoristaNome: contrato.motorista.name,
       motoristaCpf: this.formatCPF(contrato.motorista.cpf || ''),
@@ -151,11 +160,19 @@ export class PdfGeneratorService {
       dataAtual: this.formatDate(new Date()),
     };
 
+    console.log('[PDF] Dados preparados com sucesso');
+
     // Substituir placeholders
+    console.log('[PDF] Substituindo placeholders...');
     const conteudoFinal = this.substituirPlaceholders(template.conteudo, dados);
+    console.log('[PDF] Placeholders substituídos');
 
     // Gerar PDF
-    return this.gerarPDF(conteudoFinal, contrato.contractNumber || 'S/N');
+    console.log('[PDF] Gerando PDF...');
+    const pdfBuffer = await this.gerarPDF(conteudoFinal, contrato.contractNumber || 'S/N');
+    console.log(`[PDF] PDF gerado com sucesso! Tamanho: ${pdfBuffer.length} bytes`);
+    
+    return pdfBuffer;
   }
 
   /**
