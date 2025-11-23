@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMotoristaDto } from './dto/create-motorista.dto';
 import { UpdateMotoristaDto } from './dto/update-motorista.dto';
+import { ContractStatus } from '@prisma/client';
 
 @Injectable()
 export class MotoristasService {
@@ -18,7 +19,7 @@ export class MotoristasService {
         contratos: {
           where: {
             status: {
-              in: ['ANALISE', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: [ContractStatus.ANALISE, ContractStatus.ATIVO, ContractStatus.SUSPENSO], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           select: {
@@ -41,7 +42,7 @@ export class MotoristasService {
         contratos: {
           where: {
             status: {
-              in: ['ANALISE', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: [ContractStatus.ANALISE, ContractStatus.ATIVO, ContractStatus.SUSPENSO], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           include: {

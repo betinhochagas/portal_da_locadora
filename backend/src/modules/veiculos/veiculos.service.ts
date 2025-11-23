@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVeiculoDto } from './dto/create-veiculo.dto';
 import { UpdateVeiculoDto } from './dto/update-veiculo.dto';
 import { RegistrarKmDto } from './dto/registrar-km.dto';
+import { ContractStatus } from '@prisma/client';
 
 @Injectable()
 export class VeiculosService {
@@ -24,7 +25,7 @@ export class VeiculosService {
         },
         contratos: {
           where: {
-            status: 'ATIVO',
+            status: ContractStatus.ATIVO,
           },
           select: {
             id: true,
@@ -53,7 +54,7 @@ export class VeiculosService {
         contratos: {
           where: {
             status: {
-              in: ['ANALISE', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: [ContractStatus.ANALISE, ContractStatus.ATIVO, ContractStatus.SUSPENSO], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           include: {

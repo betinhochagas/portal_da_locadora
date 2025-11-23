@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateContratoDto } from './dto/create-contrato.dto';
 import { UpdateContratoDto } from './dto/update-contrato.dto';
 import { ChangeVehicleDto } from './dto/change-vehicle.dto';
+import { ContractStatus } from '@prisma/client';
 
 @Injectable()
 export class ContratosService {
@@ -124,7 +125,7 @@ export class ContratosService {
         ...createContratoDto,
         monthlyAmount: createContratoDto.monthlyAmount.toString(),
         deposit: createContratoDto.deposit?.toString(),
-        status: 'ANALISE', // Sempre começa em análise
+        status: ContractStatus.ANALISE, // Sempre começa em análise
       },
       include: {
         motorista: true,
@@ -231,13 +232,23 @@ export class ContratosService {
       }
     }
 
+    // Preparar dados para atualização (apenas campos permitidos)
+    const dataToUpdate: any = {};
+    
+    if (updateContratoDto.startDate !== undefined) dataToUpdate.startDate = updateContratoDto.startDate;
+    if (updateContratoDto.endDate !== undefined) dataToUpdate.endDate = updateContratoDto.endDate;
+    if (updateContratoDto.billingDay !== undefined) dataToUpdate.billingDay = updateContratoDto.billingDay;
+    if (updateContratoDto.monthlyAmount !== undefined) dataToUpdate.monthlyAmount = updateContratoDto.monthlyAmount.toString();
+    if (updateContratoDto.deposit !== undefined) dataToUpdate.deposit = updateContratoDto.deposit?.toString();
+    if (updateContratoDto.kmStart !== undefined) dataToUpdate.kmStart = updateContratoDto.kmStart;
+    if (updateContratoDto.kmCurrent !== undefined) dataToUpdate.kmCurrent = updateContratoDto.kmCurrent;
+    if (updateContratoDto.notes !== undefined) dataToUpdate.notes = updateContratoDto.notes;
+    if (updateContratoDto.status !== undefined) dataToUpdate.status = updateContratoDto.status;
+    if (updateContratoDto.cancelReason !== undefined) dataToUpdate.cancelReason = updateContratoDto.cancelReason;
+
     const updated = await this.prisma.contrato.update({
       where: { id },
-      data: {
-        ...updateContratoDto,
-        monthlyAmount: updateContratoDto.monthlyAmount?.toString(),
-        deposit: updateContratoDto.deposit?.toString(),
-      },
+      data: dataToUpdate,
       include: {
         motorista: true,
         veiculo: true,
@@ -270,7 +281,7 @@ export class ContratosService {
   async activateContract(id: string) {
     const contrato = await this.findOne(id);
 
-    if (contrato.status !== 'ANALISE') {
+    if (contrato.status !== ContractStatus.ANALISE) {
       throw new BadRequestException(
         'Apenas contratos em análise podem ser ativados',
       );
@@ -285,7 +296,7 @@ export class ContratosService {
     const updated = await this.prisma.contrato.update({
       where: { id },
       data: {
-        status: 'ATIVO',
+        status: ContractStatus.ATIVO,
         signedAt: new Date(),
       },
       include: {
@@ -303,7 +314,7 @@ export class ContratosService {
   async suspendContract(id: string, reason: string) {
     const contrato = await this.findOne(id);
 
-    if (contrato.status !== 'ATIVO') {
+    if (contrato.status !== ContractStatus.ATIVO) {
       throw new BadRequestException(
         'Apenas contratos ativos podem ser suspensos',
       );
@@ -312,7 +323,7 @@ export class ContratosService {
     const updated = await this.prisma.contrato.update({
       where: { id },
       data: {
-        status: 'SUSPENSO',
+        status: ContractStatus.SUSPENSO,
         notes: `${contrato.notes || ''}\n[${new Date().toISOString()}] SUSPENSO: ${reason}`,
       },
       include: {
@@ -330,7 +341,7 @@ export class ContratosService {
   async reactivateContract(id: string) {
     const contrato = await this.findOne(id);
 
-    if (contrato.status !== 'SUSPENSO') {
+    if (contrato.status !== ContractStatus.SUSPENSO) {
       throw new BadRequestException(
         'Apenas contratos suspensos podem ser reativados',
       );
@@ -339,7 +350,7 @@ export class ContratosService {
     const updated = await this.prisma.contrato.update({
       where: { id },
       data: {
-        status: 'ATIVO',
+        status: ContractStatus.ATIVO,
         notes: `${contrato.notes || ''}\n[${new Date().toISOString()}] REATIVADO`,
       },
       include: {
@@ -357,7 +368,7 @@ export class ContratosService {
   async cancelContract(id: string, reason: string) {
     const contrato = await this.findOne(id);
 
-    if (!['ATIVO', 'SUSPENSO', 'ANALISE'].includes(contrato.status)) {
+    if (![ContractStatus.ATIVO, ContractStatus.SUSPENSO, ContractStatus.ANALISE].includes(contrato.status)) {
       throw new BadRequestException(
         'Apenas contratos ativos, suspensos ou em análise podem ser cancelados',
       );
@@ -372,7 +383,7 @@ export class ContratosService {
     const updated = await this.prisma.contrato.update({
       where: { id },
       data: {
-        status: 'CANCELADO',
+        status: ContractStatus.CANCELADO,
         canceledAt: new Date(),
         cancelReason: reason,
       },
@@ -391,7 +402,7 @@ export class ContratosService {
   async completeContract(id: string) {
     const contrato = await this.findOne(id);
 
-    if (contrato.status !== 'ATIVO') {
+    if (contrato.status !== ContractStatus.ATIVO) {
       throw new BadRequestException(
         'Apenas contratos ativos podem ser concluídos',
       );
@@ -406,7 +417,7 @@ export class ContratosService {
     const updated = await this.prisma.contrato.update({
       where: { id },
       data: {
-        status: 'CONCLUIDO',
+        status: ContractStatus.CONCLUIDO,
       },
       include: {
         motorista: true,
@@ -423,7 +434,7 @@ export class ContratosService {
   async changeVehicle(id: string, changeVehicleDto: ChangeVehicleDto) {
     const contrato = await this.findOne(id);
 
-    if (contrato.status !== 'ATIVO') {
+    if (contrato.status !== ContractStatus.ATIVO) {
       throw new BadRequestException(
         'Apenas contratos ativos podem ter troca de veículo',
       );
