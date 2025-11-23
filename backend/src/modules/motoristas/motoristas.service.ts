@@ -18,7 +18,7 @@ export class MotoristasService {
         contratos: {
           where: {
             status: {
-              in: ['RASCUNHO', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: ['ANALISE', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           select: {
@@ -41,7 +41,7 @@ export class MotoristasService {
         contratos: {
           where: {
             status: {
-              in: ['RASCUNHO', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: ['ANALISE', 'ATIVO', 'SUSPENSO'], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           include: {

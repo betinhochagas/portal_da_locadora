@@ -51,7 +51,7 @@ export default function ContratosListPage() {
     total: contratos?.length || 0,
     ativos: contratos?.filter((c) => c.status === 'ATIVO').length || 0,
     suspensos: contratos?.filter((c) => c.status === 'SUSPENSO').length || 0,
-    rascunhos: contratos?.filter((c) => c.status === 'RASCUNHO').length || 0,
+    analise: contratos?.filter((c) => c.status === 'ANALISE').length || 0,
   };
 
   // Verificar permissões

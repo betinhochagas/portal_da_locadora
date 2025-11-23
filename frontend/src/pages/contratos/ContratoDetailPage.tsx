@@ -380,7 +380,7 @@ export default function ContratoDetailPage() {
               Ações
             </h2>
             <div className="flex flex-wrap gap-2">
-              {contrato.status === 'RASCUNHO' && (
+              {contrato.status === 'ANALISE' && (
                 <button
                   onClick={() => handleAction('activate')}
                   className="btn-primary"
@@ -412,7 +412,7 @@ export default function ContratoDetailPage() {
                   Reativar
                 </button>
               )}
-              {['ATIVO', 'SUSPENSO', 'RASCUNHO'].includes(contrato.status) && (
+              {['ATIVO', 'SUSPENSO', 'ANALISE'].includes(contrato.status) && (
                 <button
                   onClick={() => handleAction('cancel')}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"

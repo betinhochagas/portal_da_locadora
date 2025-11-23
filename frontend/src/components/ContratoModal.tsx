@@ -84,7 +84,7 @@ export function ContratoModal({ isOpen, onClose, contratoId }: ContratoModalProp
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      RASCUNHO: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      ANALISE: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
       ATIVO: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       SUSPENSO: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       CONCLUIDO: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',

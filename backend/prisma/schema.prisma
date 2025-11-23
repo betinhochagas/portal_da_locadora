@@ -297,7 +297,7 @@ model Contrato {
 }
 
 enum ContractStatus {
-  RASCUNHO       // Rascunho (não assinado)
+  ANALISE        // Em análise (aguardando ativação)
   ATIVO          // Ativo
   SUSPENSO       // Suspenso (inadimplência temporária)
   CANCELADO      // Cancelado

@@ -1,6 +1,6 @@
 // Enum de status do contrato (alinhado com Prisma)
 const ContractStatusEnum = {
-  RASCUNHO: 'RASCUNHO',
+  ANALISE: 'ANALISE',
   ATIVO: 'ATIVO',
   SUSPENSO: 'SUSPENSO',
   CANCELADO: 'CANCELADO',
@@ -14,7 +14,7 @@ export { ContractStatusEnum as ContractStatus };
 
 // Labels em português para os status
 export const ContractStatusLabels: Record<ContractStatus, string> = {
-  RASCUNHO: 'Rascunho',
+  ANALISE: 'Em Análise',
   ATIVO: 'Ativo',
   SUSPENSO: 'Suspenso',
   CANCELADO: 'Cancelado',
@@ -26,11 +26,11 @@ export const ContractStatusColors: Record<
   ContractStatus,
   { bg: string; text: string; darkBg: string; darkText: string }
 > = {
-  RASCUNHO: {
-    bg: 'bg-gray-100',
-    text: 'text-gray-700',
-    darkBg: 'dark:bg-gray-700',
-    darkText: 'dark:text-gray-300',
+  ANALISE: {
+    bg: 'bg-yellow-100',
+    text: 'text-yellow-700',
+    darkBg: 'dark:bg-yellow-900',
+    darkText: 'dark:text-yellow-300',
   },
   ATIVO: {
     bg: 'bg-green-100',

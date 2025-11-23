@@ -338,7 +338,7 @@ async function main() {
       monthlyAmount: 1600.0,
       deposit: 1500.0,
       kmStart: 15000,
-      status: 'RASCUNHO',
+      status: 'ANALISE',
       notes: 'Aguardando assinatura do contrato',
     },
   });

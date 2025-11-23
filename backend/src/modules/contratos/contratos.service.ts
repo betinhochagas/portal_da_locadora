@@ -112,13 +112,19 @@ export class ContratosService {
       );
     }
 
+    // Marcar veículo como INATIVO durante análise
+    await this.prisma.veiculo.update({
+      where: { id: createContratoDto.veiculoId },
+      data: { status: 'INATIVO' },
+    });
+
     // Criar contrato
     const contrato = await this.prisma.contrato.create({
       data: {
         ...createContratoDto,
         monthlyAmount: createContratoDto.monthlyAmount.toString(),
         deposit: createContratoDto.deposit?.toString(),
-        status: 'RASCUNHO', // Sempre começa como rascunho
+        status: 'ANALISE', // Sempre começa em análise
       },
       include: {
         motorista: true,
@@ -260,13 +266,13 @@ export class ContratosService {
     return { message: 'Contrato removido com sucesso' };
   }
 
-  // Ativar contrato (de RASCUNHO → ATIVO)
+  // Ativar contrato (de ANALISE → ATIVO)
   async activateContract(id: string) {
     const contrato = await this.findOne(id);
 
-    if (contrato.status !== 'RASCUNHO') {
+    if (contrato.status !== 'ANALISE') {
       throw new BadRequestException(
-        'Apenas contratos em rascunho podem ser ativados',
+        'Apenas contratos em análise podem ser ativados',
       );
     }
 
@@ -351,19 +357,17 @@ export class ContratosService {
   async cancelContract(id: string, reason: string) {
     const contrato = await this.findOne(id);
 
-    if (!['ATIVO', 'SUSPENSO', 'RASCUNHO'].includes(contrato.status)) {
+    if (!['ATIVO', 'SUSPENSO', 'ANALISE'].includes(contrato.status)) {
       throw new BadRequestException(
-        'Apenas contratos ativos, suspensos ou em rascunho podem ser cancelados',
+        'Apenas contratos ativos, suspensos ou em análise podem ser cancelados',
       );
     }
 
-    // Se estava ativo, liberar o veículo
-    if (contrato.status === 'ATIVO') {
-      await this.prisma.veiculo.update({
-        where: { id: contrato.veiculoId },
-        data: { status: 'DISPONIVEL' },
-      });
-    }
+    // Liberar o veículo (de ATIVO ou INATIVO para DISPONIVEL)
+    await this.prisma.veiculo.update({
+      where: { id: contrato.veiculoId },
+      data: { status: 'DISPONIVEL' },
+    });
 
     const updated = await this.prisma.contrato.update({
       where: { id },
