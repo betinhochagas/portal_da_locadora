@@ -221,7 +221,11 @@ export default function ContratoWizardPage() {
               </div>
 
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {motoristasAtivos.length === 0 ? (
+                {searchMotorista.trim() === '' ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    Digite o nome, CPF ou CNPJ para buscar um motorista
+                  </div>
+                ) : motoristasAtivos.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     Nenhum motorista ativo encontrado
                   </div>
