@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMotoristaDto } from './dto/create-motorista.dto';
 import { UpdateMotoristaDto } from './dto/update-motorista.dto';
@@ -12,6 +13,17 @@ import { ContractStatus } from '@prisma/client';
 @Injectable()
 export class MotoristasService {
   constructor(private prisma: PrismaService) {}
+
+  // Gera senha aleatória de 8 caracteres (letras e números)
+  private gerarSenhaAleatoria(): string {
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let senha = '';
+    for (let i = 0; i < 8; i++) {
+      senha += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return senha;
+  }
 
   async findAll() {
     return this.prisma.motorista.findMany({
@@ -107,9 +119,64 @@ export class MotoristasService {
       }
     }
 
-    return this.prisma.motorista.create({
-      data: createMotoristaDto,
+    // Gera senha aleatória
+    const senhaGerada = this.gerarSenhaAleatoria();
+    const passwordHash = await bcrypt.hash(senhaGerada, 10);
+
+    const motorista = await this.prisma.motorista.create({
+      data: {
+        ...createMotoristaDto,
+        password: passwordHash,
+        passwordReset: true, // Força troca no primeiro login
+      },
     });
+
+    // TODO: Enviar email com credenciais
+    // await this.mailService.enviarCredenciaisAcesso(
+    //   motorista.email,
+    //   motorista.name,
+    //   motorista.cpf,
+    //   senhaGerada,
+    // );
+
+    // Retorna motorista + senha gerada (para exibir ao admin)
+    return {
+      ...motorista,
+      senhaGerada, // IMPORTANTE: Senha só é retornada nesta criação
+    };
+  }
+
+  async resetPassword(id: string) {
+    // Verificar se motorista existe
+    const motorista = await this.findOne(id);
+
+    // Gera nova senha aleatória
+    const novaSenhaGerada = this.gerarSenhaAleatoria();
+    const passwordHash = await bcrypt.hash(novaSenhaGerada, 10);
+
+    // Atualiza motorista
+    await this.prisma.motorista.update({
+      where: { id },
+      data: {
+        password: passwordHash,
+        passwordReset: true, // Força troca no primeiro login
+        loginAttempts: 0, // Reseta tentativas
+        lockedUntil: null, // Remove bloqueio
+      },
+    });
+
+    // TODO: Enviar email com nova senha
+    // await this.mailService.enviarNovaCredencial(
+    //   motorista.email,
+    //   motorista.name,
+    //   motorista.cpf,
+    //   novaSenhaGerada,
+    // );
+
+    return {
+      message: 'Nova senha gerada com sucesso',
+      senhaGerada: novaSenhaGerada, // Retorna senha para admin visualizar
+    };
   }
 
   async update(id: string, updateMotoristaDto: UpdateMotoristaDto) {

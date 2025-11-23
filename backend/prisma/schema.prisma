@@ -103,6 +103,13 @@ model Motorista {
   blacklisted   Boolean  @default(false) // Bloqueado por inadimplência/sinistro
   blacklistReason String?
   
+  // Autenticação Portal do Motorista
+  password      String?  // Hash bcrypt da senha
+  passwordReset Boolean @default(true) // Forçar troca de senha no primeiro login
+  lastLogin     DateTime?
+  loginAttempts Int     @default(0)
+  lockedUntil   DateTime?
+  
   // Documentos digitalizados
   cnhPhoto      String?  // URL do arquivo
   rgPhoto       String?

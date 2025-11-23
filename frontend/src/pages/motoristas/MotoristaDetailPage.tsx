@@ -1,12 +1,12 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { documentosService } from '../../services/documentosService';
 import { formatFileSize, isImage, isPDF } from '../../types/documento';
 import type { DocumentoDigital } from '../../types/documento';
 import { Download, FileText, Image as ImageIcon, Eye, ExternalLink, Car as CarIcon } from 'lucide-react';
-import { useState } from 'react';
 import { DocumentModal } from '../../components/DocumentModal';
 import { PDFThumbnail } from '../../components/PDFThumbnail';
 import { ContratoModal } from '../../components/ContratoModal';
@@ -62,6 +62,10 @@ export function MotoristaDetailPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentoDigital | null>(null);
   const [selectedContratoId, setSelectedContratoId] = useState<string | null>(null);
+  
+  // Estado para modal de reset de senha
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [novaSenhaGerada, setNovaSenhaGerada] = useState<string | null>(null);
 
   const { data: motorista, isLoading, error } = useQuery<Motorista>({
     queryKey: ['motorista', id],
@@ -112,9 +116,34 @@ export function MotoristaDetailPage() {
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/motoristas/${id}/reset-password`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setNovaSenhaGerada(data.senhaGerada);
+      setShowResetPasswordModal(true);
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      setMessage({
+        type: 'error',
+        text: err.response?.data?.message || 'Erro ao gerar nova senha',
+      });
+      setTimeout(() => setMessage(null), 5000);
+    },
+  });
+
   const handleDelete = () => {
     if (window.confirm('Tem certeza que deseja excluir este motorista?')) {
       deleteMutation.mutate();
+    }
+  };
+
+  const handleResetPassword = () => {
+    if (window.confirm('Tem certeza que deseja gerar uma nova senha para este motorista?\n\nA senha atual será invalidada.')) {
+      resetPasswordMutation.mutate();
     }
   };
 
@@ -150,6 +179,7 @@ export function MotoristaDetailPage() {
 
   const canEdit = user?.role && ['ADMIN', 'DIRETORIA', 'GERENTE_LOJA', 'ATENDENTE'].includes(user.role);
   const canDelete = user?.role && ['ADMIN', 'DIRETORIA'].includes(user.role);
+  const canResetPassword = user?.role && ['ADMIN', 'DIRETORIA', 'GERENTE_LOJA'].includes(user.role);
 
   const formatCPF = (cpf: string | null) => {
     if (!cpf) return 'N/A';
@@ -210,6 +240,73 @@ export function MotoristaDetailPage() {
   };
 
   return (
+    <>
+      {/* Modal de Nova Senha Gerada */}
+      {showResetPasswordModal && novaSenhaGerada && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
+                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Nova Senha Gerada!
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Anote a senha abaixo. Ela não será exibida novamente.
+              </p>
+            </div>
+
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg p-4 mb-6">
+              <p className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 mb-2">
+                NOVA SENHA DO MOTORISTA:
+              </p>
+              <div className="flex items-center justify-between bg-white dark:bg-gray-700 rounded px-4 py-3 border border-yellow-300 dark:border-yellow-600">
+                <code className="text-2xl font-mono font-bold text-gray-900 dark:text-white tracking-wider">
+                  {novaSenhaGerada}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(novaSenhaGerada);
+                    alert('Senha copiada!');
+                  }}
+                  className="ml-4 p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+                  title="Copiar senha"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+                <strong>⚠️ IMPORTANTE:</strong><br />
+                • A senha anterior foi invalidada<br />
+                • O motorista deve usar esta nova senha no Portal do Motorista<br />
+                • Será solicitada a criação de uma senha pessoal no primeiro login<br />
+                • Acesso: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded text-xs">http://seu-ip:5173/motorista/login</code>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowResetPasswordModal(false);
+                setNovaSenhaGerada(null);
+              }}
+              className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Mensagem de Feedback */}
@@ -251,6 +348,15 @@ export function MotoristaDetailPage() {
               >
                 ✏️ Editar
               </Link>
+            )}
+            {canResetPassword && (
+              <button
+                onClick={handleResetPassword}
+                disabled={resetPasswordMutation.isPending}
+                className="btn-primary bg-green-600 hover:bg-green-700 disabled:bg-gray-300"
+              >
+                {resetPasswordMutation.isPending ? '⏳ Gerando...' : '🔑 Nova Senha'}
+              </button>
             )}
             {canDelete && (
               <button
@@ -630,5 +736,6 @@ export function MotoristaDetailPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

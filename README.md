@@ -392,22 +392,41 @@ npm run test:e2e:ui   # Interface visual
 
 ---
 
-## 🚀 Deploy
+## 🚀 Deploy em Produção
 
-### Backend (Railway / Render)
+> ⚠️ **IMPORTANTE:** O deploy em produção será realizado **APENAS** após o sistema estar **100% completo** com todas as funcionalidades implementadas, testadas e documentadas.
+
+### Pré-requisitos para Deploy
+
+Antes de fazer deploy, certifique-se que:
+
+- ✅ Todas as funcionalidades core estão implementadas
+- ✅ Portal do Motorista está funcional
+- ✅ Testes E2E foram executados com sucesso
+- ✅ Documentação completa foi revisada
+- ✅ Sistema foi validado em ambiente local
+- ✅ Variáveis de ambiente de produção configuradas
+- ✅ Backups automáticos configurados
+
+### Estratégia de Deploy (quando o sistema estiver completo)
+
+#### Backend (Railway / Render / AWS)
 
 ```bash
 # 1. Configure variáveis de ambiente
 DATABASE_URL=postgresql://...
 JWT_SECRET=...
 PORT=3000
+MAIL_HOST=...
+MAIL_USER=...
+MAIL_PASSWORD=...
 
 # 2. Build e deploy
 npm run build
 npm run start:prod
 ```
 
-### Frontend (Vercel / Netlify)
+#### Frontend (Vercel / Netlify)
 
 ```bash
 # 1. Configure variável de ambiente
@@ -420,7 +439,7 @@ npm run build
 vercel --prod
 ```
 
-### Docker (Produção)
+#### Docker (Produção)
 
 ```bash
 # Build das imagens
@@ -429,6 +448,8 @@ docker-compose -f docker-compose.prod.yml build
 # Suba os containers
 docker-compose -f docker-compose.prod.yml up -d
 ```
+
+**Status atual:** Sistema em desenvolvimento. Deploy será realizado na versão 1.0 final.
 
 ---
 

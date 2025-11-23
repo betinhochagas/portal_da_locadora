@@ -58,8 +58,14 @@ export class MotoristasController {
     return this.motoristasService.findOne(id);
   }
 
+  @Post(':id/reset-password')
+  @Roles('ADMIN', 'DIRETORIA', 'GERENTE_LOJA')
+  resetPassword(@Param('id') id: string) {
+    return this.motoristasService.resetPassword(id);
+  }
+
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.DIRETORIA, Role.GERENTE_LOJA, Role.ATENDENTE)
+  @Roles('ADMIN', 'DIRETORIA', 'GERENTE_LOJA', 'ATENDENTE')
   update(
     @Param('id') id: string,
     @Body() updateMotoristaDto: UpdateMotoristaDto,
