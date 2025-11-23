@@ -28,9 +28,9 @@ export class ContratoTemplatesController {
     return this.service.findAll();
   }
 
-  @Get('ativo')
-  findAtivo() {
-    return this.service.findAtivo();
+  @Get('ativos')
+  findAtivos() {
+    return this.service.findAtivos();
   }
 
   @Get(':id')
@@ -41,8 +41,8 @@ export class ContratoTemplatesController {
 
   @Post()
   @Roles(Role.ADMIN, Role.DIRETORIA)
-  create(@Body() dto: CreateTemplateDto, @CurrentUser() user: { sub: string }) {
-    return this.service.create(dto, user.sub);
+  create(@Body() dto: CreateTemplateDto, @CurrentUser() user: { userId: string }) {
+    return this.service.create(dto, user.userId);
   }
 
   @Patch(':id')
@@ -51,10 +51,10 @@ export class ContratoTemplatesController {
     return this.service.update(id, dto);
   }
 
-  @Post(':id/ativar')
+  @Post(':id/toggle-ativo')
   @Roles(Role.ADMIN, Role.DIRETORIA)
-  ativar(@Param('id') id: string) {
-    return this.service.ativar(id);
+  toggleAtivo(@Param('id') id: string) {
+    return this.service.toggleAtivo(id);
   }
 
   @Delete(':id')

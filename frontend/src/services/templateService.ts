@@ -35,10 +35,10 @@ const templateService = {
   },
 
   /**
-   * Busca template ativo
+   * Lista templates ativos
    */
-  async getAtivo(): Promise<ContratoTemplate> {
-    const response = await api.get('/contrato-templates/ativo');
+  async getAtivos(): Promise<ContratoTemplate[]> {
+    const response = await api.get('/contrato-templates/ativos');
     return response.data;
   },
 
@@ -67,10 +67,10 @@ const templateService = {
   },
 
   /**
-   * Ativa template
+   * Alterna status ativo/inativo do template
    */
-  async ativar(id: string): Promise<ContratoTemplate> {
-    const response = await api.post(`/contrato-templates/${id}/ativar`);
+  async toggleAtivo(id: string): Promise<ContratoTemplate> {
+    const response = await api.post(`/contrato-templates/${id}/toggle-ativo`);
     return response.data;
   },
 

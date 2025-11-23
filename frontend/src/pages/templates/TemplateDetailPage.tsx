@@ -18,8 +18,8 @@ export function TemplateDetailPage() {
     enabled: !!id,
   });
 
-  const ativarMutation = useMutation({
-    mutationFn: () => templateService.ativar(id!),
+  const toggleAtivoMutation = useMutation({
+    mutationFn: () => templateService.toggleAtivo(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       queryClient.invalidateQueries({ queryKey: ['template', id] });
@@ -39,15 +39,16 @@ export function TemplateDetailPage() {
     },
   });
 
-  const handleAtivar = () => {
-    if (window.confirm('Deseja ativar este template? O template atualmente ativo será desativado.')) {
-      ativarMutation.mutate();
+  const handleToggleAtivo = () => {
+    const action = template?.ativo ? 'desativar' : 'ativar';
+    if (window.confirm(`Deseja ${action} este template?`)) {
+      toggleAtivoMutation.mutate();
     }
   };
 
   const handleDelete = () => {
     if (template?.ativo) {
-      alert('Não é possível excluir o template ativo. Ative outro template primeiro.');
+      alert('Não é possível excluir um template ativo. Desative-o primeiro.');
       return;
     }
     if (window.confirm('Deseja realmente excluir este template? Esta ação não pode ser desfeita.')) {
@@ -120,16 +121,27 @@ export function TemplateDetailPage() {
               <Edit className="w-5 h-5" />
               Editar
             </Link>
-            {!template.ativo && (
-              <button
-                onClick={handleAtivar}
-                disabled={ativarMutation.isPending}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50"
-              >
-                <CheckCircle className="w-5 h-5" />
-                {ativarMutation.isPending ? 'Ativando...' : 'Ativar'}
-              </button>
-            )}
+            <button
+              onClick={handleToggleAtivo}
+              disabled={toggleAtivoMutation.isPending}
+              className={`${
+                template.ativo
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-green-600 hover:bg-green-700'
+              } text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50`}
+            >
+              {template.ativo ? (
+                <>
+                  <XCircle className="w-5 h-5" />
+                  {toggleAtivoMutation.isPending ? 'Desativando...' : 'Desativar'}
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  {toggleAtivoMutation.isPending ? 'Ativando...' : 'Ativar'}
+                </>
+              )}
+            </button>
             {!template.ativo && (
               <button
                 onClick={handleDelete}

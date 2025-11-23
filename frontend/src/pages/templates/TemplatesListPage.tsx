@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import templateService from '../../services/templateService';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, Plus, Eye, Edit, CheckCircle, Trash2, XCircle } from 'lucide-react';
+import { FileText, Plus, Eye, Edit, CheckCircle, Trash2, XCircle, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 
 export function TemplatesListPage() {
@@ -17,15 +17,15 @@ export function TemplatesListPage() {
     queryFn: templateService.getAll,
   });
 
-  const ativarMutation = useMutation({
-    mutationFn: templateService.ativar,
+  const toggleAtivoMutation = useMutation({
+    mutationFn: templateService.toggleAtivo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
-      setMessage({ type: 'success', text: 'Template ativado com sucesso!' });
+      setMessage({ type: 'success', text: 'Status do template atualizado com sucesso!' });
       setTimeout(() => setMessage(null), 3000);
     },
     onError: () => {
-      setMessage({ type: 'error', text: 'Erro ao ativar template' });
+      setMessage({ type: 'error', text: 'Erro ao atualizar status do template' });
       setTimeout(() => setMessage(null), 3000);
     },
   });
@@ -45,9 +45,10 @@ export function TemplatesListPage() {
     },
   });
 
-  const handleAtivar = (id: string) => {
-    if (window.confirm('Deseja ativar este template? O template atualmente ativo será desativado.')) {
-      ativarMutation.mutate(id);
+  const handleToggleAtivo = (id: string, isActive: boolean) => {
+    const action = isActive ? 'desativar' : 'ativar';
+    if (window.confirm(`Deseja ${action} este template?`)) {
+      toggleAtivoMutation.mutate(id);
     }
   };
 
@@ -76,11 +77,20 @@ export function TemplatesListPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📄 Templates de Contrato</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Configure templates personalizados para geração de contratos em PDF
-          </p>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/dashboard"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            title="Voltar ao Dashboard"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📄 Templates de Contrato</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Configure templates personalizados para geração de contratos em PDF
+            </p>
+          </div>
         </div>
         {canManage && (
           <Link
@@ -219,16 +229,27 @@ export function TemplatesListPage() {
                             <Edit className="w-4 h-4" />
                             Editar
                           </Link>
-                          {!template.ativo && (
-                            <button
-                              onClick={() => handleAtivar(template.id)}
-                              disabled={ativarMutation.isPending}
-                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 inline-flex items-center gap-1 disabled:opacity-50"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                              Ativar
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleToggleAtivo(template.id, template.ativo)}
+                            disabled={toggleAtivoMutation.isPending}
+                            className={`${
+                              template.ativo
+                                ? 'text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300'
+                                : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300'
+                            } inline-flex items-center gap-1 disabled:opacity-50`}
+                          >
+                            {template.ativo ? (
+                              <>
+                                <XCircle className="w-4 h-4" />
+                                Desativar
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-4 h-4" />
+                                Ativar
+                              </>
+                            )}
+                          </button>
                           {!template.ativo && (
                             <button
                               onClick={() => handleDelete(template.id, template.ativo)}

@@ -30,11 +30,12 @@ export class ContratoTemplatesService {
   }
 
   /**
-   * Busca template ativo
+   * Lista templates ativos
    */
-  async findAtivo() {
-    const template = await this.prisma.contratoTemplate.findFirst({
+  async findAtivos() {
+    return this.prisma.contratoTemplate.findMany({
       where: { ativo: true },
+      orderBy: { titulo: 'asc' },
       include: {
         user: {
           select: {
@@ -45,12 +46,6 @@ export class ContratoTemplatesService {
         },
       },
     });
-
-    if (!template) {
-      throw new NotFoundException('Nenhum template ativo encontrado');
-    }
-
-    return template;
   }
 
   /**
@@ -121,22 +116,16 @@ export class ContratoTemplatesService {
   }
 
   /**
-   * Ativa um template (desativa todos os outros)
+   * Ativa/desativa um template (toggle)
    */
-  async ativar(id: string) {
+  async toggleAtivo(id: string) {
     // Verificar se existe
-    await this.findOne(id);
+    const template = await this.findOne(id);
 
-    // Desativar todos os templates
-    await this.prisma.contratoTemplate.updateMany({
-      where: { ativo: true },
-      data: { ativo: false },
-    });
-
-    // Ativar o template selecionado
+    // Alternar status
     return this.prisma.contratoTemplate.update({
       where: { id },
-      data: { ativo: true },
+      data: { ativo: !template.ativo },
       include: {
         user: {
           select: {
@@ -159,7 +148,7 @@ export class ContratoTemplatesService {
     // Impedir exclusão de template ativo
     if (template.ativo) {
       throw new BadRequestException(
-        'Não é possível excluir o template ativo. Ative outro template primeiro.',
+        'Não é possível excluir um template ativo. Desative-o primeiro.',
       );
     }
 
