@@ -33,6 +33,7 @@ export default function ContratoWizardPage() {
 
   const [searchMotorista, setSearchMotorista] = useState('');
   const [searchVeiculo, setSearchVeiculo] = useState('');
+  const [tipoCobranca, setTipoCobranca] = useState<'DIARIA' | 'SEMANAL' | 'MENSAL'>('MENSAL');
 
   // Queries
   const { data: motoristas = [] } = useQuery<Motorista[]>({
@@ -463,7 +464,35 @@ export default function ContratoWizardPage() {
                 </div>
 
                 <div>
-                  <label className="label">Valor Mensal *</label>
+                  <label className="label">Tipo de Cobrança *</label>
+                  <select
+                    value={tipoCobranca}
+                    onChange={(e) => {
+                      const tipo = e.target.value as 'DIARIA' | 'SEMANAL' | 'MENSAL';
+                      setTipoCobranca(tipo);
+                      
+                      // Atualizar valor automaticamente baseado no plano selecionado
+                      if (selectedPlano) {
+                        let valor = 0;
+                        if (tipo === 'DIARIA') valor = selectedPlano.dailyPrice;
+                        else if (tipo === 'SEMANAL') valor = selectedPlano.weeklyPrice || 0;
+                        else valor = selectedPlano.monthlyPrice;
+                        
+                        setWizardData({ ...wizardData, monthlyAmount: valor });
+                      }
+                    }}
+                    className="input"
+                  >
+                    <option value="DIARIA">Diária</option>
+                    <option value="SEMANAL">Semanal</option>
+                    <option value="MENSAL">Mensal</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">
+                    Valor {tipoCobranca === 'DIARIA' ? 'Diário' : tipoCobranca === 'SEMANAL' ? 'Semanal' : 'Mensal'} *
+                  </label>
                   <input
                     type="number"
                     step="0.01"
