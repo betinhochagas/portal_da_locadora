@@ -319,7 +319,7 @@ export default function ContratoWizardPage() {
                         setWizardData({ 
                           ...wizardData, 
                           veiculoId: veiculo.id,
-                          kmStart: veiculo.kmCurrent // Preenche automaticamente o KM inicial
+                          kmStart: veiculo.km || 0 // Preenche automaticamente o KM inicial
                         })
                       }
                       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -337,7 +337,7 @@ export default function ContratoWizardPage() {
                             {veiculo.brand} {veiculo.model}
                           </p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {veiculo.year} • {veiculo.category} • {veiculo.color} • {veiculo.kmCurrent.toLocaleString('pt-BR')} km
+                            {veiculo.year} • {veiculo.category} • {veiculo.color} • {veiculo.km?.toLocaleString('pt-BR') || 0} km
                           </p>
                         </div>
                         <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 rounded-full text-sm font-medium">

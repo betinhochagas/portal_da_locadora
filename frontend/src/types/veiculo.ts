@@ -11,7 +11,7 @@ export interface Veiculo {
   color: string;
   category: VehicleCategory;
   status: VeiculoStatus;
-  kmCurrent: number;
+  km: number; // Campo correto no schema Prisma
   active: boolean;
   createdAt: string;
   updatedAt: string;
