@@ -80,14 +80,49 @@ export default function PlanoFormPage() {
   // Mutation para criar/atualizar
   const mutation = useMutation({
     mutationFn: async (data: CreatePlanoDto | UpdatePlanoDto) => {
-      if (isEdit) {
-        return api.patch(`/planos/${id}`, data);
+      // Garantir que valores numéricos estão corretos e remover campos undefined/vazios
+      const cleanData: any = {
+        name: data.name,
+        description: data.description || undefined,
+        dailyPrice: Number(data.dailyPrice) || 0,
+        monthlyPrice: Number(data.monthlyPrice) || 0,
+        allowedCategories: data.allowedCategories,
+        includesInsurance: Boolean(data.includesInsurance),
+        includesMaintenance: Boolean(data.includesMaintenance),
+      };
+      
+      // Adicionar apenas se tiver valor válido
+      if (data.weeklyPrice && Number(data.weeklyPrice) > 0) {
+        cleanData.weeklyPrice = Number(data.weeklyPrice);
       }
-      return api.post('/planos', data);
+      
+      if (data.kmIncluded && Number(data.kmIncluded) > 0) {
+        cleanData.kmIncluded = Number(data.kmIncluded);
+      }
+      
+      if (data.kmExtraPrice && Number(data.kmExtraPrice) > 0) {
+        cleanData.kmExtraPrice = Number(data.kmExtraPrice);
+      }
+      
+      if (typeof data.active !== 'undefined') {
+        cleanData.active = Boolean(data.active);
+      }
+      
+      console.log('Enviando dados do plano:', cleanData);
+      
+      if (isEdit) {
+        return api.patch(`/planos/${id}`, cleanData);
+      }
+      return api.post('/planos', cleanData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planos'] });
       navigate('/planos');
+    },
+    onError: (error: any) => {
+      console.error('Erro ao salvar plano:', error);
+      console.error('Resposta do servidor:', error.response?.data);
+      alert(`Erro ao salvar plano: ${error.response?.data?.message || error.message}`);
     },
   });
 
