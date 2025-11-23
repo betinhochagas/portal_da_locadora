@@ -130,17 +130,18 @@ export default function ContratoWizardPage() {
     const contractNumber = `CONT-${Date.now()}`;
     
     // Preparar dados com conversões necessárias
+    // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
     const payload = {
       ...wizardData,
       contractNumber,
-      monthlyAmount: Number(wizardData.monthlyAmount),
-      deposit: Number(wizardData.deposit || 0),
+      monthlyAmount: String(Number(wizardData.monthlyAmount || 0).toFixed(2)),
+      deposit: String(Number(wizardData.deposit || 0).toFixed(2)),
       kmStart: Number(wizardData.kmStart || 0),
       billingDay: Number(wizardData.billingDay),
     };
     
     console.log('Enviando contrato:', payload);
-    createContratoMutation.mutate(payload as WizardData);
+    createContratoMutation.mutate(payload as any);
   };
 
   const isStep1Valid = () => !!wizardData.motoristaId;
