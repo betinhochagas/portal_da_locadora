@@ -147,11 +147,15 @@ O **Portal da Locadora** é um ERP moderno e completo para gestão de locadoras 
 - **Jest** - Testes unitários
 - **Git** - Controle de versão
 
+### Storage
+- **Local Storage** - Armazenamento local (desenvolvimento)
+- **AWS S3** - Storage em nuvem (produção)
+- **Adapter Pattern** - Troca transparente entre local e cloud
+
 ### Futuras Integrações
 - ⏳ Mercado Pago / Stripe (pagamentos)
 - ⏳ NodeMailer + SendGrid (emails)
 - ⏳ Twilio (SMS)
-- ⏳ AWS S3 / Cloudflare R2 (storage)
 - ⏳ Sentry (error tracking)
 - ⏳ GitHub Actions (CI/CD)
 
@@ -260,6 +264,7 @@ Após o seed do banco, use:
 - 🎯 [Visão Geral da Arquitetura](./docs/arquitetura/visao-geral.md) - Diagrama de contexto, camadas, fluxos
 - 🔐 [RBAC e Permissões](./docs/arquitetura/rbac-permissoes.md) - Controle de acesso
 - 🔌 [Endpoints da API](./docs/api/endpoints.md) - 72 endpoints REST
+- ☁️ [Cloud Storage](./docs/CLOUD_STORAGE.md) - Configuração de armazenamento AWS S3
 
 ### Documentação de Negócio
 
@@ -532,6 +537,7 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](./LICENSE) p
 - [x] Dashboard com estatísticas
 - [x] Dark mode
 - [x] Documentação completa
+- [x] Cloud Storage (AWS S3) com adapter pattern
 
 ### 🔄 Em Progresso (v1.1)
 - [ ] Wizard de criação de contratos (PASSO 23)

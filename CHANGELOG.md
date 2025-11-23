@@ -16,6 +16,36 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [1.1.0] - 2025-11-23
+
+### ✅ Cloud Storage com Adapter Pattern
+
+#### Adicionado
+- **Storage Adapter Pattern** - Arquitetura flexível para trocar entre local e cloud storage
+- **LocalStorageAdapter** - Mantém armazenamento local para desenvolvimento
+- **S3StorageAdapter** - Suporte a AWS S3 para produção
+- **StorageModule** - Módulo global com seleção automática baseada em `STORAGE_TYPE`
+- Variável de ambiente `STORAGE_TYPE` (opções: `local` ou `s3`)
+- Configuração AWS S3 via variáveis de ambiente
+- `docs/CLOUD_STORAGE.md` - Guia completo de configuração (400+ linhas)
+- Integração com AWS SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`)
+
+#### Melhorado
+- **UploadsService** - Refatorado para usar storage adapter
+- **UploadsModule** - Integração com StorageModule
+- Backend agora suporta armazenamento em nuvem sem modificar código existente
+- URLs presignadas do S3 com expiração de 1 hora (segurança)
+- Backward compatibility total com storage local
+
+#### Documentação
+- Guia de setup AWS S3 (IAM, bucket, CORS)
+- Guia de migração de local para S3
+- Estimativa de custos AWS S3
+- Troubleshooting de erros comuns
+- Boas práticas de segurança
+
+---
+
 ## [1.0.0] - 2025-11-23
 
 ### ✅ Auditoria Completa e Preparação para Produção
