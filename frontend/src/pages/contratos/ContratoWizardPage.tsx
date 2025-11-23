@@ -8,6 +8,7 @@ import type { Plano } from '../../types/plano';
 import type { Filial } from '../../types/filial';
 
 interface WizardData {
+  contractNumber: string;
   motoristaId: string;
   veiculoId: string;
   planoId: string;
@@ -28,6 +29,7 @@ export default function ContratoWizardPage() {
   const [wizardData, setWizardData] = useState<Partial<WizardData>>({
     billingDay: 5,
     deposit: 0,
+    kmStart: 0,
     notes: '',
   });
 
@@ -123,7 +125,22 @@ export default function ContratoWizardPage() {
 
   const handleSubmit = () => {
     if (!isStep5Valid()) return;
-    createContratoMutation.mutate(wizardData as WizardData);
+    
+    // Gerar número de contrato único
+    const contractNumber = `CONT-${Date.now()}`;
+    
+    // Preparar dados com conversões necessárias
+    const payload = {
+      ...wizardData,
+      contractNumber,
+      monthlyAmount: Number(wizardData.monthlyAmount),
+      deposit: Number(wizardData.deposit || 0),
+      kmStart: Number(wizardData.kmStart || 0),
+      billingDay: Number(wizardData.billingDay),
+    };
+    
+    console.log('Enviando contrato:', payload);
+    createContratoMutation.mutate(payload as WizardData);
   };
 
   const isStep1Valid = () => !!wizardData.motoristaId;
