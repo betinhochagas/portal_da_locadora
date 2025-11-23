@@ -1,5 +1,3 @@
-export type MotoristaStatus = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
-
 export interface Motorista {
   id: string;
   name: string;
@@ -10,7 +8,6 @@ export interface Motorista {
   cnh: string;
   cnhCategory: string;
   cnhExpiry: string;
-  status: MotoristaStatus;
   active: boolean;
   blacklisted: boolean;
   createdAt: string;

@@ -81,7 +81,8 @@ export default function ContratoWizardPage() {
   // Filtros
   const motoristasAtivos = motoristas.filter(
     (m) => {
-      if (m.status !== 'ATIVO') return false;
+      // Verificar se está ativo (boolean) e não na blacklist
+      if (!m.active || m.blacklisted) return false;
       
       const search = searchMotorista.toLowerCase();
       const searchClean = search.replace(/[.\-/]/g, ''); // Remove pontuação
@@ -252,7 +253,7 @@ export default function ContratoWizardPage() {
                           )}
                         </div>
                         <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 rounded-full text-sm font-medium">
-                          {motorista.status}
+                          ATIVO
                         </span>
                       </div>
                     </div>
