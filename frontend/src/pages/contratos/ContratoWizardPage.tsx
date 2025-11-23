@@ -144,6 +144,11 @@ export default function ContratoWizardPage() {
       return;
     }
     
+    // Converter datas para ISO-8601 (com timezone)
+    // Os campos input[type="date"] retornam YYYY-MM-DD, precisamos adicionar o horário
+    const startDateISO = new Date(wizardData.startDate + 'T00:00:00').toISOString();
+    const endDateISO = new Date(wizardData.endDate + 'T23:59:59').toISOString();
+    
     // Preparar dados com conversões necessárias
     // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
     const payload = {
@@ -152,8 +157,8 @@ export default function ContratoWizardPage() {
       veiculoId: wizardData.veiculoId,
       planoId: wizardData.planoId,
       filialId: wizardData.filialId,
-      startDate: wizardData.startDate,
-      endDate: wizardData.endDate,
+      startDate: startDateISO,
+      endDate: endDateISO,
       billingDay: Number(wizardData.billingDay),
       monthlyAmount: monthlyValue.toFixed(2),
       deposit: depositValue.toFixed(2),
