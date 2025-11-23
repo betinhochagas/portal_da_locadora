@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
@@ -20,6 +20,30 @@ interface WizardData {
   deposit: number;
   kmStart: number;
   notes: string;
+}
+
+interface CreateContratoPayload {
+  contractNumber: string;
+  motoristaId: string;
+  veiculoId: string;
+  planoId: string;
+  filialId: string;
+  startDate: string;
+  endDate: string;
+  billingDay: number;
+  monthlyAmount: string;
+  deposit: string;
+  kmStart: number;
+  notes: string;
+}
+
+interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
 }
 
 export default function ContratoWizardPage() {
@@ -71,7 +95,7 @@ export default function ContratoWizardPage() {
   });
 
   const createContratoMutation = useMutation({
-    mutationFn: async (data: WizardData) => {
+    mutationFn: async (data: CreateContratoPayload) => {
       const response = await api.post('/contratos', data);
       return response.data;
     },
@@ -79,7 +103,7 @@ export default function ContratoWizardPage() {
       queryClient.invalidateQueries({ queryKey: ['contratos'] });
       navigate('/contratos');
     },
-    onError: (error: any) => {
+    onError: (error: ErrorResponse) => {
       console.error('Erro ao criar contrato:', error);
       console.error('Resposta do servidor:', error.response?.data);
       alert(`Erro ao criar contrato: ${error.response?.data?.message || error.message}`);
@@ -93,12 +117,12 @@ export default function ContratoWizardPage() {
       if (!m.active || m.blacklisted) return false;
       
       const search = searchMotorista.toLowerCase();
-      const searchClean = search.replace(/[.\-/]/g, ''); // Remove pontuação
+      const searchClean = search.replace(/[.-/]/g, ''); // Remove pontuação
       
       return (
         m.name.toLowerCase().includes(search) ||
-        m.cpf?.replace(/[.\-]/g, '').includes(searchClean) ||
-        m.cnpj?.replace(/[.\-/]/g, '').includes(searchClean)
+        m.cpf?.replace(/[.-]/g, '').includes(searchClean) ||
+        m.cnpj?.replace(/[.-/]/g, '').includes(searchClean)
       );
     }
   );
@@ -131,7 +155,7 @@ export default function ContratoWizardPage() {
   const handleSubmit = () => {
     if (!isStep5Valid()) return;
     
-    // Gerar número de contrato único
+    // Gerar número de contrato único (usando useMemo seria ideal, mas como é no handler, podemos usar diretamente)
     const contractNumber = `CONT-${Date.now()}`;
     
     // Validar e converter valores
@@ -151,12 +175,12 @@ export default function ContratoWizardPage() {
     
     // Preparar dados com conversões necessárias
     // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
-    const payload = {
+    const payload: CreateContratoPayload = {
       contractNumber,
-      motoristaId: wizardData.motoristaId,
-      veiculoId: wizardData.veiculoId,
-      planoId: wizardData.planoId,
-      filialId: wizardData.filialId,
+      motoristaId: wizardData.motoristaId!,
+      veiculoId: wizardData.veiculoId!,
+      planoId: wizardData.planoId!,
+      filialId: wizardData.filialId!,
       startDate: startDateISO,
       endDate: endDateISO,
       billingDay: Number(wizardData.billingDay),
@@ -167,7 +191,7 @@ export default function ContratoWizardPage() {
     };
     
     console.log('Enviando contrato:', payload);
-    createContratoMutation.mutate(payload as any);
+    createContratoMutation.mutate(payload);
   };
 
   const isStep1Valid = () => !!wizardData.motoristaId;

@@ -16,7 +16,6 @@ import PlanoDetailPage from './pages/planos/PlanoDetailPage';
 import PlanoFormPage from './pages/planos/PlanoFormPage';
 import ContratosListPage from './pages/contratos/ContratosListPage';
 import ContratoDetailPage from './pages/contratos/ContratoDetailPage';
-import ContratoFormPage from './pages/contratos/ContratoFormPage';
 import ContratoWizardPage from './pages/contratos/ContratoWizardPage';
 import { RelatoriosPage } from './pages/RelatoriosPage';
 import { CobrancasListPage } from './pages/cobrancas/CobrancasListPage';
