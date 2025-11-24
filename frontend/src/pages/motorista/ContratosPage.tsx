@@ -1,10 +1,11 @@
 import { MotoristaLayout } from '../../components/layout/MotoristaLayout';
-import { FileText, Calendar, DollarSign, MapPin, Phone, Clock, Eye } from 'lucide-react';
+import { FileText, Calendar, DollarSign, MapPin, Phone, Clock, Eye, Download } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { motoristaContratosService, type Contrato } from '../../services/motorista-contratos.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 const STATUS_COLORS = {
   ATIVO: 'bg-green-100 text-green-800 border-green-200',
@@ -24,8 +25,46 @@ const STATUS_LABELS = {
 
 const ContratoCard = ({ contrato }: { contrato: Contrato }) => {
   const navigate = useNavigate();
+  const [isDownloading, setIsDownloading] = useState(false);
   const statusColor = STATUS_COLORS[contrato.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.EM_ANALISE;
   const statusLabel = STATUS_LABELS[contrato.status as keyof typeof STATUS_LABELS] || contrato.status;
+
+  const handleDownloadPDF = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking download
+    
+    setIsDownloading(true);
+
+    try {
+      const token = localStorage.getItem('motorista_token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      
+      const response = await fetch(`${API_URL}/contratos/${contrato.id}/gerar-pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `******
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao gerar PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contrato-${contrato.contractNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Erro ao baixar PDF:', err);
+      alert('Erro ao baixar o contrato. Tente novamente.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
@@ -138,14 +177,22 @@ const ContratoCard = ({ contrato }: { contrato: Contrato }) => {
           </div>
         )}
 
-        {/* Botão Ver Detalhes */}
-        <div className="pt-3">
+        {/* Botões de Ação */}
+        <div className="pt-3 grid grid-cols-2 gap-2">
           <button
             onClick={() => navigate(`/motorista/contratos/${contrato.id}`)}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg font-medium transition-colors text-sm"
           >
             <Eye className="w-4 h-4" />
             Ver Detalhes
+          </button>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            <Download className="w-4 h-4" />
+            {isDownloading ? 'Baixando...' : 'Baixar PDF'}
           </button>
         </div>
       </div>
