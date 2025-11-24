@@ -1,16 +1,20 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { MotoristaPagamentosService } from './motorista-pagamentos.service';
 import { MotoristaAuthGuard } from '../../common/guards/motorista-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+
+interface MotoristaUser {
+  id: string;
+  type: 'motorista';
+}
 
 @Controller('motorista/pagamentos')
 @UseGuards(MotoristaAuthGuard)
 export class MotoristaPagamentosController {
-  constructor(
-    private readonly pagamentosService: MotoristaPagamentosService,
-  ) {}
+  constructor(private readonly pagamentosService: MotoristaPagamentosService) {}
 
   @Get()
-  async getPagamentos(@Req() req: any) {
-    return this.pagamentosService.getPagamentos(req.user.id);
+  async getPagamentos(@CurrentUser() user: MotoristaUser) {
+    return this.pagamentosService.getPagamentos(user.id);
   }
 }

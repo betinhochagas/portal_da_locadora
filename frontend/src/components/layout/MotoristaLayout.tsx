@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useMotoristaAuth } from '../../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../../hooks/useMotoristaAuth';
 import { Home, FileText, DollarSign, User, LogOut, Car } from 'lucide-react';
 
 interface MotoristaLayoutProps {

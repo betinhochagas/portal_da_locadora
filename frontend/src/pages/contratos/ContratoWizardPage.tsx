@@ -72,17 +72,28 @@ export default function ContratoWizardPage() {
 
   const createContratoMutation = useMutation({
     mutationFn: async (data: WizardData) => {
-      const response = await api.post('/contratos', data);
+      // Generate contract number here in the mutation function (outside render)
+      const contractNumber = `CONT-${Date.now()}`;
+      const payload = {
+        ...data,
+        contractNumber,
+      };
+      const response = await api.post('/contratos', payload);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contratos'] });
       navigate('/contratos');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error('Erro ao criar contrato:', error);
-      console.error('Resposta do servidor:', error.response?.data);
-      alert(`Erro ao criar contrato: ${error.response?.data?.message || error.message}`);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } }; message?: string };
+        console.error('Resposta do servidor:', err.response?.data);
+        alert(`Erro ao criar contrato: ${err.response?.data?.message || err.message || 'Erro desconhecido'}`);
+      } else {
+        alert('Erro ao criar contrato: Erro desconhecido');
+      }
     },
   });
 
@@ -97,8 +108,8 @@ export default function ContratoWizardPage() {
       
       return (
         m.name.toLowerCase().includes(search) ||
-        m.cpf?.replace(/[.\-]/g, '').includes(searchClean) ||
-        m.cnpj?.replace(/[.\-/]/g, '').includes(searchClean)
+        m.cpf?.replace(/[.-]/g, '').includes(searchClean) ||
+        m.cnpj?.replace(/[.-/]/g, '').includes(searchClean)
       );
     }
   );
@@ -131,9 +142,6 @@ export default function ContratoWizardPage() {
   const handleSubmit = () => {
     if (!isStep5Valid()) return;
     
-    // Gerar número de contrato único
-    const contractNumber = `CONT-${Date.now()}`;
-    
     // Validar e converter valores
     const monthlyValue = Number(wizardData.monthlyAmount);
     const depositValue = Number(wizardData.deposit || 0);
@@ -152,7 +160,6 @@ export default function ContratoWizardPage() {
     // Preparar dados com conversões necessárias
     // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
     const payload = {
-      contractNumber,
       motoristaId: wizardData.motoristaId,
       veiculoId: wizardData.veiculoId,
       planoId: wizardData.planoId,
@@ -167,7 +174,7 @@ export default function ContratoWizardPage() {
     };
     
     console.log('Enviando contrato:', payload);
-    createContratoMutation.mutate(payload as any);
+    createContratoMutation.mutate(payload);
   };
 
   const isStep1Valid = () => !!wizardData.motoristaId;

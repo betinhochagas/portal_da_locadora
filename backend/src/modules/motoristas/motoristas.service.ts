@@ -16,8 +16,7 @@ export class MotoristasService {
 
   // Gera senha aleatória de 8 caracteres (letras e números)
   private gerarSenhaAleatoria(): string {
-    const chars =
-      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     let senha = '';
     for (let i = 0; i < 8; i++) {
       senha += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -31,7 +30,11 @@ export class MotoristasService {
         contratos: {
           where: {
             status: {
-              in: [ContractStatus.ANALISE, ContractStatus.ATIVO, ContractStatus.SUSPENSO], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: [
+                ContractStatus.ANALISE,
+                ContractStatus.ATIVO,
+                ContractStatus.SUSPENSO,
+              ], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           select: {
@@ -54,7 +57,11 @@ export class MotoristasService {
         contratos: {
           where: {
             status: {
-              in: [ContractStatus.ANALISE, ContractStatus.ATIVO, ContractStatus.SUSPENSO], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: [
+                ContractStatus.ANALISE,
+                ContractStatus.ATIVO,
+                ContractStatus.SUSPENSO,
+              ], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           include: {
@@ -147,8 +154,8 @@ export class MotoristasService {
   }
 
   async resetPassword(id: string) {
-    // Verificar se motorista existe
-    const motorista = await this.findOne(id);
+    // Verificar se motorista existe (validation only)
+    await this.findOne(id);
 
     // Gera nova senha aleatória
     const novaSenhaGerada = this.gerarSenhaAleatoria();

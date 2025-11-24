@@ -54,7 +54,11 @@ export class VeiculosService {
         contratos: {
           where: {
             status: {
-              in: [ContractStatus.ANALISE, ContractStatus.ATIVO, ContractStatus.SUSPENSO], // Não retorna contratos CONCLUIDOS ou CANCELADOS
+              in: [
+                ContractStatus.ANALISE,
+                ContractStatus.ATIVO,
+                ContractStatus.SUSPENSO,
+              ], // Não retorna contratos CONCLUIDOS ou CANCELADOS
             },
           },
           include: {

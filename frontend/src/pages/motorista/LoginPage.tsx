@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMotoristaAuth } from '../../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../../hooks/useMotoristaAuth';
 import { Eye, EyeOff, Car, AlertCircle } from 'lucide-react';
 
 export const MotoristaLoginPage = () => {
@@ -58,16 +58,21 @@ export const MotoristaLoginPage = () => {
       } else {
         navigate('/motorista/dashboard');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro no login:', err);
       
       // Mensagens de erro amigáveis
-      if (err.response?.status === 401) {
-        setError('CPF ou senha incorretos.');
-      } else if (err.response?.status === 403) {
-        setError(err.response?.data?.message || 'Acesso bloqueado. Entre em contato com a locadora.');
-      } else if (err.response?.data?.message) {
-        setError(err.response.data.message);
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response?: { status?: number; data?: { message?: string } } };
+        if (error.response?.status === 401) {
+          setError('CPF ou senha incorretos.');
+        } else if (error.response?.status === 403) {
+          setError(error.response?.data?.message || 'Acesso bloqueado. Entre em contato com a locadora.');
+        } else if (error.response?.data?.message) {
+          setError(error.response.data.message);
+        } else {
+          setError('Erro ao fazer login. Tente novamente.');
+        }
       } else {
         setError('Erro ao fazer login. Tente novamente.');
       }

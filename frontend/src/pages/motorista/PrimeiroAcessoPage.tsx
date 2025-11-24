@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMotoristaAuth } from '../../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../../hooks/useMotoristaAuth';
 import { Eye, EyeOff, Key, AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export const PrimeiroAcessoPage = () => {
@@ -44,13 +44,18 @@ export const PrimeiroAcessoPage = () => {
       });
 
       navigate('/motorista/dashboard');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro no primeiro acesso:', err);
       
-      if (err.response?.status === 401) {
-        setError('Senha atual incorreta.');
-      } else if (err.response?.data?.message) {
-        setError(err.response.data.message);
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response?: { status?: number; data?: { message?: string } } };
+        if (error.response?.status === 401) {
+          setError('Senha atual incorreta.');
+        } else if (error.response?.data?.message) {
+          setError(error.response.data.message);
+        } else {
+          setError('Erro ao trocar senha. Tente novamente.');
+        }
       } else {
         setError('Erro ao trocar senha. Tente novamente.');
       }

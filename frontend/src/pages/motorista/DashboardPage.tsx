@@ -1,5 +1,5 @@
 import { MotoristaLayout } from '../../components/layout/MotoristaLayout';
-import { useMotoristaAuth } from '../../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../../hooks/useMotoristaAuth';
 import { useQuery } from '@tanstack/react-query';
 import { motoristaDashboardService } from '../../services/motorista-dashboard.service';
 import { FileText, DollarSign, Car, TrendingUp, Clock, Calendar, AlertCircle } from 'lucide-react';
