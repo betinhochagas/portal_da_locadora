@@ -72,7 +72,13 @@ export default function ContratoWizardPage() {
 
   const createContratoMutation = useMutation({
     mutationFn: async (data: WizardData) => {
-      const response = await api.post('/contratos', data);
+      // Generate contract number here in the mutation function (outside render)
+      const contractNumber = `CONT-${Date.now()}`;
+      const payload = {
+        ...data,
+        contractNumber,
+      };
+      const response = await api.post('/contratos', payload);
       return response.data;
     },
     onSuccess: () => {
@@ -102,8 +108,8 @@ export default function ContratoWizardPage() {
       
       return (
         m.name.toLowerCase().includes(search) ||
-        m.cpf?.replace(/[.\-]/g, '').includes(searchClean) ||
-        m.cnpj?.replace(/[.\-/]/g, '').includes(searchClean)
+        m.cpf?.replace(/[.-]/g, '').includes(searchClean) ||
+        m.cnpj?.replace(/[.-/]/g, '').includes(searchClean)
       );
     }
   );
@@ -136,10 +142,6 @@ export default function ContratoWizardPage() {
   const handleSubmit = () => {
     if (!isStep5Valid()) return;
     
-    // Gerar número de contrato único
-    // eslint-disable-next-line react-hooks/purity
-    const contractNumber = `CONT-${Date.now()}`;
-    
     // Validar e converter valores
     const monthlyValue = Number(wizardData.monthlyAmount);
     const depositValue = Number(wizardData.deposit || 0);
@@ -158,7 +160,6 @@ export default function ContratoWizardPage() {
     // Preparar dados com conversões necessárias
     // IMPORTANTE: monthlyAmount e deposit precisam ser strings para o @IsDecimal do backend
     const payload = {
-      contractNumber,
       motoristaId: wizardData.motoristaId,
       veiculoId: wizardData.veiculoId,
       planoId: wizardData.planoId,

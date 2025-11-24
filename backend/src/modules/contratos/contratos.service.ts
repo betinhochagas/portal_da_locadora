@@ -233,7 +233,7 @@ export class ContratosService {
     }
 
     // Preparar dados para atualização (apenas campos permitidos)
-    const dataToUpdate: any = {};
+    const dataToUpdate: Partial<Record<string, Date | string | number | undefined>> = {};
 
     if (updateContratoDto.startDate !== undefined)
       dataToUpdate.startDate = updateContratoDto.startDate;
