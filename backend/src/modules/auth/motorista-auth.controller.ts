@@ -6,6 +6,7 @@ import {
   MotoristaPrimeiroAcessoDto,
   MotoristaEsqueciSenhaDto,
   MotoristaResetSenhaDto,
+  MotoristaChangePasswordDto,
 } from './dto/motorista-auth.dto';
 
 @Controller('auth/motorista')
@@ -40,5 +41,14 @@ export class MotoristaAuthController {
   @UseGuards(MotoristaAuthGuard)
   async getProfile(@Req() req: any) {
     return req.user;
+  }
+
+  @Post('change-password')
+  @UseGuards(MotoristaAuthGuard)
+  async changePassword(
+    @Req() req: any,
+    @Body() dto: MotoristaChangePasswordDto,
+  ) {
+    return this.motoristaAuthService.changePassword(req.user.id, dto);
   }
 }

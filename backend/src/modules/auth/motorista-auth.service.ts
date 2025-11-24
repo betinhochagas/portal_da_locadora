@@ -215,4 +215,37 @@ export class MotoristaAuthService {
     // TODO: Validar token e resetar senha
     throw new BadRequestException('Funcionalidade em desenvolvimento');
   }
+
+  async changePassword(motoristaId: string, dto: { senhaAtual: string; novaSenha: string }) {
+    // Buscar motorista
+    const motorista = await this.prisma.motorista.findUnique({
+      where: { id: motoristaId },
+    });
+
+    if (!motorista || !motorista.password) {
+      throw new NotFoundException('Motorista não encontrado');
+    }
+
+    // Verificar senha atual
+    const senhaValida = await bcrypt.compare(dto.senhaAtual, motorista.password);
+    if (!senhaValida) {
+      throw new UnauthorizedException('Senha atual incorreta');
+    }
+
+    // Hash da nova senha
+    const hashedPassword = await bcrypt.hash(dto.novaSenha, 10);
+
+    // Atualizar senha
+    await this.prisma.motorista.update({
+      where: { id: motoristaId },
+      data: {
+        password: hashedPassword,
+        passwordReset: false,
+      },
+    });
+
+    return {
+      message: 'Senha alterada com sucesso',
+    };
+  }
 }
