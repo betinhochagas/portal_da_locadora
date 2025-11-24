@@ -1,5 +1,5 @@
 import { MotoristaLayout } from '../../components/layout/MotoristaLayout';
-import { useMotoristaAuth } from '../../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../../hooks/useMotoristaAuth';
 import { User, Mail, Phone, CreditCard, Shield, Key, Calendar } from 'lucide-react';
 
 export const MotoristaPerfilPage = () => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMotoristaAuth } from '../../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../../hooks/useMotoristaAuth';
 import { Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 export const EsqueciSenhaPage = () => {
@@ -47,11 +47,16 @@ export const EsqueciSenhaPage = () => {
       await esqueciSenha({ cpf: cpfNumbers });
       setSuccess(true);
       setCpf('');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao solicitar reset:', err);
       
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response?: { data?: { message?: string } } };
+        if (error.response?.data?.message) {
+          setError(error.response.data.message);
+        } else {
+          setError('Erro ao solicitar nova senha. Tente novamente.');
+        }
       } else {
         setError('Erro ao solicitar nova senha. Tente novamente.');
       }

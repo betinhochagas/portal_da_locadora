@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useMotoristaAuth } from '../contexts/MotoristaAuthContext';
+import { useMotoristaAuth } from '../hooks/useMotoristaAuth';
 
 export const MotoristaPrivateRoute = () => {
   const { isAuthenticated, loading, needsPasswordReset } = useMotoristaAuth();
