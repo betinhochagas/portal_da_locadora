@@ -1,9 +1,10 @@
 import { MotoristaLayout } from '../../components/layout/MotoristaLayout';
-import { FileText, Calendar, DollarSign, MapPin, Phone, Clock } from 'lucide-react';
+import { FileText, Calendar, DollarSign, MapPin, Phone, Clock, Eye } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { motoristaContratosService, type Contrato } from '../../services/motorista-contratos.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
   ATIVO: 'bg-green-100 text-green-800 border-green-200',
@@ -22,6 +23,7 @@ const STATUS_LABELS = {
 } as const;
 
 const ContratoCard = ({ contrato }: { contrato: Contrato }) => {
+  const navigate = useNavigate();
   const statusColor = STATUS_COLORS[contrato.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.EM_ANALISE;
   const statusLabel = STATUS_LABELS[contrato.status as keyof typeof STATUS_LABELS] || contrato.status;
 
@@ -135,6 +137,17 @@ const ContratoCard = ({ contrato }: { contrato: Contrato }) => {
             </div>
           </div>
         )}
+
+        {/* Botão Ver Detalhes */}
+        <div className="pt-3">
+          <button
+            onClick={() => navigate(`/motorista/contratos/${contrato.id}`)}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+            Ver Detalhes
+          </button>
+        </div>
       </div>
     </div>
   );

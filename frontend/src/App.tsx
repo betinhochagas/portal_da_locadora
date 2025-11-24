@@ -36,6 +36,7 @@ import { PrimeiroAcessoPage } from './pages/motorista/PrimeiroAcessoPage';
 import { EsqueciSenhaPage } from './pages/motorista/EsqueciSenhaPage';
 import { MotoristaDashboardPage } from './pages/motorista/DashboardPage';
 import { MotoristaContratosPage } from './pages/motorista/ContratosPage';
+import { MotoristaContratoDetailPage } from './pages/motorista/ContratoDetailPage';
 import { MotoristaPagamentosPage } from './pages/motorista/PagamentosPage';
 import { MotoristaPerfilPage } from './pages/motorista/PerfilPage';
 
@@ -285,6 +286,7 @@ function App() {
                 <Route element={<MotoristaPrivateRoute />}>
                   <Route path="/motorista/dashboard" element={<MotoristaDashboardPage />} />
                   <Route path="/motorista/contratos" element={<MotoristaContratosPage />} />
+                  <Route path="/motorista/contratos/:id" element={<MotoristaContratoDetailPage />} />
                   <Route path="/motorista/pagamentos" element={<MotoristaPagamentosPage />} />
                   <Route path="/motorista/perfil" element={<MotoristaPerfilPage />} />
                 </Route>
